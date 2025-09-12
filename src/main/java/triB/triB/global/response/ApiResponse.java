@@ -48,11 +48,6 @@ public class ApiResponse<T> {
         return wrap(HttpStatus.CREATED, "CREATED", message, data);
     }
 
-    // 성공 204 NO CONTENT
-    public static <T> ResponseEntity<ApiResponse<T>> noContent(String message) {
-        return wrap(HttpStatus.NO_CONTENT, "NO_CONTENT", message, null);
-    }
-
     // ====================== 실패 응답 =========================
 
     public static ResponseEntity<ApiResponse<Void>> fail(HttpStatus status,
