@@ -1,5 +1,6 @@
 package triB.triB.global.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -49,6 +50,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "BUSINESS_ERROR",
                 ex.getMessage()
+        );
+    }
+
+    /**
+     * 데이터 무결성 위반(409) 처리
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return ApiResponse.fail(
+                HttpStatus.CONFLICT,
+                "CONFLICT",
+                ex.getMessage() != null ? ex.getMessage() : "이미 사용 중인 값입니다."
         );
     }
 
