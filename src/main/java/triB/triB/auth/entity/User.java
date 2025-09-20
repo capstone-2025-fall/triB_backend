@@ -19,9 +19,7 @@ import java.time.LocalDateTime;
         uniqueConstraints = {
                 @UniqueConstraint(name = "uq_users_email", columnNames = "email"),
                 @UniqueConstraint(name = "uq_users_username", columnNames = "username")
-
         }
-
 )
 public class User {
 
@@ -37,7 +35,7 @@ public class User {
     @Column(name = "password", nullable = true)
     private String password;
 
-    @Column(name = "nickname", nullable = true, unique = true)
+    @Column(name = "nickname", nullable = true)
     private String nickname;
 
     @Column(name = "username", nullable = true, unique = true)
@@ -47,13 +45,15 @@ public class User {
     @Column(name = "photo_url", columnDefinition = "TEXT", nullable = true)
     private String photoUrl;
 
+    @Builder.Default
     @Column(name = "user_status", nullable = false)
     @Enumerated(EnumType.STRING)
     private UserStatus userStatus = UserStatus.ACTIVE;
 
+    @Builder.Default
     @Column(name = "is_alarm", nullable = false)
     @Enumerated(EnumType.STRING)
-    private IsAlarm isAlarm;
+    private IsAlarm isAlarm = IsAlarm.ON;
 
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
