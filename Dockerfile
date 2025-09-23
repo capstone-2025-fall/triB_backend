@@ -1,5 +1,5 @@
 # 베이스 이미지
-FROM openjdk:17-jdk
+FROM eclipse-temurin:17-jre
 
 # 빌드 된 파일 경로 변수 설정
 ARG JAR_FILE=build/libs/*.jar
