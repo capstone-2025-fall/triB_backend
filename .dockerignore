@@ -4,7 +4,6 @@
 .vscode
 
 **/.gradle
-**/build
 **/target
 **/node_modules
 
