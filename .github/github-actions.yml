@@ -1,0 +1,116 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "main" ]
+    # main에 푸시할때만 CI/CD 실행
+permissions:
+  contents: read
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+
+    - name: Build with Gradle
+      run: ./gradlew build -x test --no-daemon
+
+  docker:
+    name: Build docker image and push to registry
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+ 
+      - name: Build and Push docker image to Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-app:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-app:latest
+
+  deploy:
+    name: Deploy on EC2
+    needs: docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate environment file
+        run: |
+          umask 177
+          cat > .env.prod <<'EOF'
+          ${{ secrets.ENV_PROD }}
+          EOF
+          
+      # # AWS 자격 증명 (액세스키 방식; OIDC로 대체 가능)
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+          
+      # docker compose로 container 실행하기 위해 docker-compose.yml를 EC2로 복사
+      - name: Copy Docker compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          source: |
+            docker-compose.yml
+            .env.prod
+          target: /home/ubuntu
+
+      # ssh를 통해 EC2에 접속하고 docker container 재시작
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
+          IMAGE_TAG: ${{ github.sha }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          port: 22 # ssh 포트 번호
+          script: |
+            set -e
+            cd /home/ubuntu
+            # 로그인
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            # 이미지 업데이트
+            docker compose pull
+            # 컨테이너 실행
+            docker compose up -d
+          
+          
+
+   
