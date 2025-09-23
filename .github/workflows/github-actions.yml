@@ -121,17 +121,18 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,DOCKERHUB_NAMESPACE,IMAGE_TAG
           port: 22 # ssh 포트 번호
           script: |
             set -e
             cd /home/ubuntu
             # 로그인
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            printf "DOCKERHUB_NAMESPACE=%s\nIMAGE_TAG=%s\n" "$DOCKERHUB_NAMESPACE" "$IMAGE_TAG" > .compose.env
             # 이미지 업데이트
-            docker compose pull
+            sudo docker compose --env-file .compose.env pull
             # 컨테이너 실행
-            docker compose up -d
+            sudo docker compose --env-file .compose.env up -d
           
           
 
