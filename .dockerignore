@@ -9,8 +9,6 @@
 
 *.log
 nohup.out
-.env
-.env.*
 docker-compose*.yml
 *.iml
 .tmp/
