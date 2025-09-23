@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Generate environment file
         run: |
-          umask 177
+          umask 644
           cat > .env.prod <<'EOF'
           ${{ secrets.ENV_PROD }}
           EOF
