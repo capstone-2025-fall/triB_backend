@@ -52,8 +52,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-app:${{ github.sha }}
-            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-app:latest
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-docker-hub:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_NAMESPACE }}/trib-docker-hub:latest
 
   deploy:
     name: Deploy on EC2
