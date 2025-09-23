@@ -94,8 +94,10 @@ jobs:
           ls -al .env.prod || true
           test -s docker-compose.yml
           test -s .env.prod
+          realpath ./docker-compose.yml
+          realpath ./.env.prod
 
-      # docker compose로 container 실행하기 위해 docker-compose.yml를 EC2로 복사
+      # docker compose로 container 실행하기 위해 docker-compose.yml와 .env.prod를 EC2로 복사
       - name: Copy Docker compose file to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -103,9 +105,11 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           source: |
-            docker-compose.yml
-            .env.prod
+            ./docker-compose.yml
+            ./.env.prod
           target: /home/ubuntu
+          overwrite: true
+          debug: true
 
       # ssh를 통해 EC2에 접속하고 docker container 재시작
       - name: Deploy to EC2
