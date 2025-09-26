@@ -1,8 +1,12 @@
 package triB.triB.global.exception;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import jakarta.persistence.EntityNotFoundException;
@@ -49,6 +53,42 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(
                 HttpStatus.BAD_REQUEST,
                 "BUSINESS_ERROR",
+                ex.getMessage()
+        );
+    }
+
+    /**
+     * 인증 실패(401) 처리
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentialsException(BadCredentialsException ex) {
+        return ApiResponse.fail(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHORIZED",
+                ex.getMessage()
+        );
+    }
+
+    /**
+     * JWT 만료(401) 처리
+     */
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExpiredJwtException(ExpiredJwtException ex) {
+        return ApiResponse.fail(
+                HttpStatus.UNAUTHORIZED,
+                "JWT_EXPIRED",
+                ex.getMessage()
+        );
+    }
+
+    /**
+     * JWT 일반 오류 처리(401)
+     */
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(JwtException ex) {
+        return ApiResponse.fail(
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_JWT",
                 ex.getMessage()
         );
     }
