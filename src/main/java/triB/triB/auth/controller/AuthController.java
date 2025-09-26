@@ -83,6 +83,12 @@ public class AuthController {
         AuthResponse response = authService.socialLogin(userId);
         return ApiResponse.created("소셜로그인 회원가입을 성공했습니다.", response);
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        AccessTokenResponse response = authService.refreshAccessToken(refreshTokenRequest.getRefreshToken());
+        return ApiResponse.ok("accessToken을 재발급 받았습니다.", response);
+    }
 }
 
 

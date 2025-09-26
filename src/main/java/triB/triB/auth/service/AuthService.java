@@ -1,14 +1,17 @@
 package triB.triB.auth.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import triB.triB.auth.dto.AccessTokenResponse;
 import triB.triB.auth.dto.AuthRequest;
 import triB.triB.auth.dto.AuthResponse;
 import triB.triB.auth.dto.RegisterRequest;
@@ -113,6 +116,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse loginUser(String email, String password) {
+        log.info("로그인 시;");
         User user = userRepository.findByEmail(email)
                 .orElseThrow(()->
                         new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다."));
@@ -176,5 +180,23 @@ public class AuthService {
         String accessToken = jwtProvider.generateAccessToken(userId);
         String refreshToken = jwtProvider.generateRefreshToken(userId);
         return new AuthResponse(userId, accessToken, refreshToken);
+    }
+
+    public AccessTokenResponse refreshAccessToken(String refreshToken) {
+        if (!jwtProvider.validateRefreshToken(refreshToken)){
+            throw new JwtException("토큰이 유효하지 않습니다.");
+        }
+        Long userId = jwtProvider.extractUserIdFromRefreshToken(refreshToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+        log.info("redis에서 refreshToken 존재하는지 조회");
+        if (!redisClient.getData("rf", String.valueOf(userId)).equals(refreshToken)) {
+            log.info("redis에 refreshToken 없음");
+            redisClient.deleteData("rf", String.valueOf(userId));
+            throw new JwtException("토큰이 만료되었거나 토큰이 유효하지 않습니다.");
+        }
+        String accessToken = jwtProvider.generateAccessToken(userId);
+        return new AccessTokenResponse(accessToken);
     }
 }

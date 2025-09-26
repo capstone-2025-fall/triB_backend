@@ -46,7 +46,8 @@ public class AwsS3Client {
     public void delete(String fileName) {
         if (fileName == null || fileName.isEmpty())
             return;
-
+        if (!fileName.startsWith(String.format("https://%s.s3.%s.amazonaws.com/", bucket, region)))
+            return;
         try{
             String fileKey = fileName.substring(fileName.lastIndexOf("/") + 1);
 

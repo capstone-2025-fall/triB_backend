@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "uq_users_username", columnNames = "username")
         }
 )
+@Where(clause = "user_status = 'ACTIVE'")
 public class User {
 
     @Id
