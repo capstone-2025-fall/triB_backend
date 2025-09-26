@@ -77,7 +77,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (existUser.isEmpty()) {
             log.info("신규 유저 입니다. 회원가입 페이지로 리디렉션합니다.");
             String registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname);
-
+            log.info("registerToken = {}", registerToken);
             targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
                     .queryParam("isNewUser", true)
                     .queryParam("registerToken", registerToken)
@@ -93,6 +93,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             String accessToken = jwtProvider.generateAccessToken(user.getUserId());
             String refreshToken = jwtProvider.generateRefreshToken(user.getUserId());
 
+            log.info("accessToken = {}, refreshToken = {}", accessToken, refreshToken);
             targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
                     .queryParam("isNewUser", false)
                     .queryParam("accessToken", accessToken)
@@ -100,7 +101,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .queryParam("userId", userId)
                     .build().encode().toUriString();
         }
-        log.info("Redirect to " + targetUrl);
         response.sendRedirect(targetUrl);
     }
 }

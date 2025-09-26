@@ -1,6 +1,7 @@
 package triB.triB.global.security.jwt;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -37,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
        String token = extractToken(request);
 
-       if(token == null || token.isBlank()) {
+       if (token == null || token.isBlank()) {
            filterChain.doFilter(request, response);
            return;
        }
@@ -62,6 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
            log.debug("SecurityContext가 생성되었습니다. userId: {} ", userPrincipal.getUserId());
        } else {
            log.debug("유효한 jwt 토큰이 request에 대해 존재하지 않습니다. request: {}", request.getRequestURI());
+           throw new JwtException("유효한 jwt 토큰이 request에 대해 존재하지않습니다.");
        }
        filterChain.doFilter(request, response);
     }
