@@ -4,17 +4,27 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.auth.dto.AuthRequest;
+import triB.triB.auth.dto.AuthResponse;
+import triB.triB.auth.dto.RegisterRequest;
+import triB.triB.auth.entity.OauthAccount;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.global.infra.AwsS3Client;
+import triB.triB.global.security.jwt.JwtProvider;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -26,8 +36,11 @@ public class AuthService {
 
     private final MailService mailService;
     private final UserRepository userRepository;
+    private final OauthAccountRepository oauthAccountRepository;
+    private final PasswordEncoder passwordEncoder;
     private final RedisClient redisClient;
     private final AwsS3Client s3Client;
+    private final JwtProvider jwtProvider;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
@@ -84,8 +97,7 @@ public class AuthService {
                     .photoUrl(photoUrl)
                     .email(authRequest.getEmail())
                     .username(authRequest.getUsername())
-                    // todo password 해시화하기
-                    .password(authRequest.getPassword())
+                    .password(passwordEncoder.encode(authRequest.getPassword()))
                     .nickname(authRequest.getNickname())
                     .build();
             userRepository.save(user);
@@ -95,5 +107,73 @@ public class AuthService {
                 s3Client.delete(photoUrl);
             throw new DataIntegrityViolationException("이미 존재하는 값입니다.", e);
         }
+    }
+
+    @Transactional
+    public AuthResponse loginUser(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(()->
+                        new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다."));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            log.info("비밀번호가 일치하지 않습니다.");
+            throw new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+        log.info("로그인한 유저의 정보: userId ="+ user.getUserId()+ " username =" +user.getUsername());
+        Long userId = user.getUserId();
+        String accessToken = jwtProvider.generateAccessToken(userId);
+        String refreshToken = jwtProvider.generateRefreshToken(userId);
+        return new AuthResponse(userId, accessToken, refreshToken);
+    }
+
+    @Transactional
+    public Long socialSignup(MultipartFile photo, RegisterRequest registerRequest) {
+        // todo RegisterToken 분석하기
+        String registerToken = registerRequest.getRegisterToken();
+        String provider = jwtProvider.getProviderFromRegisterToken(registerToken);
+        String providerId = jwtProvider.getProviderUserIdFromRegisterToken(registerToken);
+        String image = registerRequest.getPhotoUrl();
+
+        log.info("registerToken = " + registerToken + " providerId = " + providerId + " image = " + image);
+
+        String uploadUrl = null;
+        String photoUrl = null;
+
+        try {
+            if (photo != null && !photo.isEmpty()) {
+                uploadUrl = s3Client.uploadFile(photo);
+                photoUrl = uploadUrl;
+            }
+            else if (image != null && !image.isEmpty())
+                photoUrl = image;
+
+            User user = User.builder()
+                    .photoUrl(photoUrl)
+                    .email(null)
+                    .username(registerRequest.getUsername())
+                    .password(null)
+                    .nickname(registerRequest.getNickname())
+                    .build();
+            userRepository.save(user);
+
+            OauthAccount account = OauthAccount.builder()
+                    .user(user)
+                    .provider(provider)
+                    .providerUserId(providerId)
+                    .build();
+            oauthAccountRepository.save(account);
+            return user.getUserId();
+        } catch (DataIntegrityViolationException e ){
+            // 회원가입 실패시 S3에 올라간 사진 삭제로 무결성 유지
+            if (uploadUrl != null)
+                s3Client.delete(uploadUrl);
+            throw new DataIntegrityViolationException("회원가입을 실패했습니다.", e);
+        }
+    }
+
+    public AuthResponse socialLogin(Long userId){
+        String accessToken = jwtProvider.generateAccessToken(userId);
+        String refreshToken = jwtProvider.generateRefreshToken(userId);
+        return new AuthResponse(userId, accessToken, refreshToken);
     }
 }

@@ -39,3 +39,4 @@ out/
 .env.prod
 .env.local
 data.sql
+dump.rdb
