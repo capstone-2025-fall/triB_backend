@@ -83,7 +83,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .queryParam("registerToken", registerToken)
                     .queryParam("photoUrl", photoUrl)
                     .queryParam("nickname", nickname)
-                    .build().toString();
+                    .build().encode().toString();
 
         } else {
             log.info("기존 유저 입니다. 메인 페이지로 리디렉션합니다.");
@@ -98,7 +98,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                     .queryParam("accessToken", accessToken)
                     .queryParam("refreshToken", refreshToken)
                     .queryParam("userId", userId)
-                    .build().toString();
+                    .build().encode().toUriString();
         }
         log.info("Redirect to " + targetUrl);
         response.sendRedirect(targetUrl);
