@@ -71,7 +71,7 @@ public class AuthController {
     }
 
     /**
-     * 신규 소셜로그인 유저 회원가입 & 로그인
+     * 신규 소셜 로그인 유저 회원가입 & 로그인
      */
     @PostMapping(value = "/complete-profile",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
