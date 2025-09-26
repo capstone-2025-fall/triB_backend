@@ -90,6 +90,7 @@ public class AuthService {
 
     @Transactional
     public void signup(MultipartFile photo, AuthRequest authRequest) {
+        log.info("회원가입을 시작합니다.");
         String photoUrl = null;
         try {
             photoUrl = !photo.isEmpty() ? s3Client.uploadFile(photo) : null;
@@ -101,6 +102,7 @@ public class AuthService {
                     .nickname(authRequest.getNickname())
                     .build();
             userRepository.save(user);
+            log.info("회원가입이 완료되었습니다. userId ="+ user.getUserId());
         } catch (DataIntegrityViolationException e ){
             // 회원가입 실패시 S3에 올라간 사진 삭제로 무결성 유지
             if (photoUrl != null)
@@ -128,7 +130,6 @@ public class AuthService {
 
     @Transactional
     public Long socialSignup(MultipartFile photo, RegisterRequest registerRequest) {
-        // todo RegisterToken 분석하기
         String registerToken = registerRequest.getRegisterToken();
         String provider = jwtProvider.getProviderFromRegisterToken(registerToken);
         String providerId = jwtProvider.getProviderUserIdFromRegisterToken(registerToken);
