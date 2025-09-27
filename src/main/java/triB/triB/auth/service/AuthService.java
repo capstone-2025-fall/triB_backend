@@ -1,5 +1,8 @@
 package triB.triB.auth.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +47,7 @@ public class AuthService {
     private final RedisClient redisClient;
     private final AwsS3Client s3Client;
     private final JwtProvider jwtProvider;
+    private final ObjectMapper objectMapper;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
@@ -198,5 +202,12 @@ public class AuthService {
         }
         String accessToken = jwtProvider.generateAccessToken(userId);
         return new AccessTokenResponse(accessToken);
+    }
+
+    public Map<String, Object> getBodyByTicket(String key) throws JsonProcessingException {
+        String str = redisClient.getData("ti", key);
+        if (str == null)
+            throw new EntityNotFoundException("해당 키가 존재하지 않습니다. 다시 로그인해주세요");
+        return objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
     }
 }

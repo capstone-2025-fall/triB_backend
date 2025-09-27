@@ -26,6 +26,7 @@ import triB.triB.auth.entity.OauthAccount;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.global.infra.RedisClient;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.global.security.jwt.JwtProvider;
@@ -50,6 +51,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
+    private final RedisClient redisClient;
+    private final ObjectMapper objectMapper;
     private final OauthAccountRepository oauthAccountRepository;
 
     @Override
@@ -65,7 +68,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             default -> throw new OAuth2AuthenticationException("지원하지 않는 소셜입니다.");
         };
 
-        // todo null 값으로 들어오는 이유 확인
         String providerId = oAuth2UserInfo.getProviderId();
         String photoUrl = oAuth2UserInfo.getProfileImageUrl();
         String nickname = oAuth2UserInfo.getNickname();
@@ -78,12 +80,19 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             log.info("신규 유저 입니다. 회원가입 페이지로 리디렉션합니다.");
             String registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname);
             log.info("registerToken = {}", registerToken);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("isNewUser", true);
+            body.put("registerToken", registerToken);
+            body.put("photoUrl", photoUrl);
+            body.put("nickname", nickname);
+            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+
+            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+
             targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
-                    .queryParam("isNewUser", true)
-                    .queryParam("registerToken", registerToken)
-                    .queryParam("photoUrl", photoUrl)
-                    .queryParam("nickname", nickname)
-                    .build().encode().toString();
+                    .queryParam("key", key)
+                    .build().toString();
 
         } else {
             log.info("기존 유저 입니다. 메인 페이지로 리디렉션합니다.");
@@ -94,12 +103,19 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             String refreshToken = jwtProvider.generateRefreshToken(user.getUserId());
 
             log.info("accessToken = {}, refreshToken = {}", accessToken, refreshToken);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("isNewUser", false);
+            body.put("accessToken", accessToken);
+            body.put("refreshToken", refreshToken);
+            body.put("userId", userId);
+            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+
+            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+
             targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
-                    .queryParam("isNewUser", false)
-                    .queryParam("accessToken", accessToken)
-                    .queryParam("refreshToken", refreshToken)
-                    .queryParam("userId", userId)
-                    .build().encode().toUriString();
+                    .queryParam("key", key)
+                    .build().toUriString();
         }
         response.sendRedirect(targetUrl);
     }
