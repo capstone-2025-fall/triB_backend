@@ -1,5 +1,6 @@
 package triB.triB.auth.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import triB.triB.auth.service.AuthService;
 import triB.triB.auth.service.MailService;
 import triB.triB.global.response.ApiResponse;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -84,10 +86,22 @@ public class AuthController {
         return ApiResponse.created("소셜로그인 회원가입을 성공했습니다.", response);
     }
 
+    /**
+     * 리프레스 토큰으로 accessToken 재발급
+     */
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
         AccessTokenResponse response = authService.refreshAccessToken(refreshTokenRequest.getRefreshToken());
         return ApiResponse.ok("accessToken을 재발급 받았습니다.", response);
+    }
+
+    /**
+     * 소셜 로그인해서 발급받은 티켓 아이디로 정보 조회
+     */
+    @GetMapping("/ott/exchange")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> socialLogin(@RequestParam String key) throws JsonProcessingException {
+        Map<String, Object> data = authService.getBodyByTicket(key);
+        return ApiResponse.ok("소셜로그인에 성공했습니다.", data);
     }
 }
 

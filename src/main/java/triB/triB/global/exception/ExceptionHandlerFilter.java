@@ -47,8 +47,8 @@ public class ExceptionHandlerFilter extends OncePerRequestFilter {
 
     public void setErrorResponse(HttpServletResponse response, HttpStatus status, String code, String message) throws IOException {
 
-        if (response.isCommitted()) return;
-
+        if (response.isCommitted())
+            return;
         response.setStatus(status.value());
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -58,7 +58,6 @@ public class ExceptionHandlerFilter extends OncePerRequestFilter {
         body.put("message", message);
         body.put("data", null);
         body.put("timestamp", Instant.now().toString());
-
         objectMapper.writeValue(response.getWriter(), body);
     }
 }

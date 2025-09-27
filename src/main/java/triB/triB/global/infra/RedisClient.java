@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -25,5 +26,12 @@ public class RedisClient {
 
     public void deleteData(String prefix, String key){
         redisTemplate.delete(prefix + ":" + key);
+    }
+
+    public String setTicketData(String prefix, String body){
+        String key = UUID.randomUUID().toString();
+        ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
+        valueOperations.set(prefix + ":" + key, body, Duration.ofSeconds(300));
+        return key;
     }
 }
