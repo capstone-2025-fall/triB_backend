@@ -29,9 +29,8 @@ public class OauthAccount {
     @Column(name = "oauth_account_id")
     private Long oauthAccountId;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_oauth_user"))
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(name = "provider", nullable = false)
