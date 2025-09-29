@@ -45,18 +45,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 비즈니스 로직 일반 실패(400) 처리
-     */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
-        return ApiResponse.fail(
-                HttpStatus.BAD_REQUEST,
-                "BUSINESS_ERROR",
-                ex.getMessage()
-        );
-    }
-
-    /**
      * 인증 실패(401) 처리
      */
     @ExceptionHandler(BadCredentialsException.class)
@@ -101,6 +89,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 "CONFLICT",
                 ex.getMessage() != null ? ex.getMessage() : "이미 사용 중인 값입니다."
+        );
+    }
+
+    /**
+     * 비즈니스 로직 일반 실패(400) 처리
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
+        return ApiResponse.fail(
+                HttpStatus.BAD_REQUEST,
+                "BUSINESS_ERROR",
+                ex.getMessage()
         );
     }
 

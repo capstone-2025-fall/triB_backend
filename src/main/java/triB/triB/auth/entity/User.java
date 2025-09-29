@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_users_email", columnNames = "email"),
-                @UniqueConstraint(name = "uq_users_username", columnNames = "username")
+                @UniqueConstraint(columnNames = "email"),
+                @UniqueConstraint(columnNames = "username")
         }
 )
 @Where(clause = "user_status = 'ACTIVE'")

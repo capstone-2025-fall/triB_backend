@@ -77,4 +77,11 @@ public class UserController {
         userService.deleteUser(userId);
         return ApiResponse.ok("성공적으로 탈퇴했습니다.", null);
     }
+
+    @GetMapping("/me/username")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> myUsername(@AuthenticationPrincipal UserPrincipal UserPrincipal){
+        Long userId = UserPrincipal.getUserId();
+        Map<String, Object> response = userService.getMyUsername(userId);
+        return ApiResponse.ok("유저의 아이디를 조회했습니다.", response);
+    }
 }

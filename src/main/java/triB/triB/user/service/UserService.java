@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
 import triB.triB.auth.entity.IsAlarm;
@@ -15,6 +16,9 @@ import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.user.dto.MyProfile;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +44,7 @@ public class UserService {
         );
     }
 
+    @Transactional
     public void updateMyProfile(Long userId, MultipartFile photo, String nickname) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
@@ -56,6 +61,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
     public IsAlarm updateAlarm(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
@@ -66,6 +72,7 @@ public class UserService {
         return user.getIsAlarm();
     }
 
+    @Transactional
     public void checkPassword(Long userId, String password) {
         log.info("userId = {} 의 비밀번호를 확인합니다.", userId);
 
@@ -77,6 +84,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void updatePassword(Long userId, String password) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
@@ -86,6 +94,7 @@ public class UserService {
         log.info("userId = {} 의 비밀번호를 변경합니다.", userId);
     }
 
+    @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
@@ -96,5 +105,14 @@ public class UserService {
         user.setUsername(null);
         userRepository.save(user);
         log.info("userId = {} 인 유저가 탈퇴했습니다.", userId);
+    }
+
+    public Map<String, Object> getMyUsername(Long userId){
+        Map<String, Object> map = new HashMap<>();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+        String username = user.getUsername();
+        map.put("username", username);
+        return map;
     }
 }
