@@ -17,6 +17,9 @@ import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.user.dto.MyProfile;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -102,5 +105,14 @@ public class UserService {
         user.setUsername(null);
         userRepository.save(user);
         log.info("userId = {} 인 유저가 탈퇴했습니다.", userId);
+    }
+
+    public Map<String, Object> getMyUsername(Long userId){
+        Map<String, Object> map = new HashMap<>();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+        String username = user.getUsername();
+        map.put("username", username);
+        return map;
     }
 }

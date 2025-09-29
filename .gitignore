@@ -40,3 +40,4 @@ out/
 .env.local
 data.sql
 dump.rdb
+trib-firebase-adminkey.json
