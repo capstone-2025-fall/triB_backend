@@ -19,8 +19,10 @@ import triB.triB.auth.dto.AuthRequest;
 import triB.triB.auth.dto.AuthResponse;
 import triB.triB.auth.dto.RegisterRequest;
 import triB.triB.auth.entity.OauthAccount;
+import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.OauthAccountRepository;
+import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.global.infra.AwsS3Client;
@@ -28,9 +30,7 @@ import triB.triB.global.security.jwt.JwtProvider;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -48,6 +48,7 @@ public class AuthService {
     private final AwsS3Client s3Client;
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
+    private final TokenRepository tokenRepository;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 

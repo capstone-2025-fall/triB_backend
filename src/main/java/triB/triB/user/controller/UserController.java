@@ -16,6 +16,7 @@ import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.user.dto.MyProfile;
 import triB.triB.user.dto.PasswordRequest;
+import triB.triB.user.dto.TokenRequest;
 import triB.triB.user.service.UserService;
 
 import java.util.HashMap;
@@ -83,5 +84,12 @@ public class UserController {
         Long userId = UserPrincipal.getUserId();
         Map<String, Object> response = userService.getMyUsername(userId);
         return ApiResponse.ok("유저의 아이디를 조회했습니다.", response);
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<ApiResponse<Void>> saveFcmToken(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TokenRequest tokenRequest) {
+        Long userId = userPrincipal.getUserId();
+        userService.saveToken(userId, tokenRequest.getDeviceId(), tokenRequest.getToken());
+        return ApiResponse.ok("토큰을 저장했습니다.", null);
     }
 }

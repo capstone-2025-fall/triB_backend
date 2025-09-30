@@ -3,6 +3,7 @@ package triB.triB.user.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -10,8 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
 import triB.triB.auth.entity.IsAlarm;
+import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.entity.UserStatus;
+import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.infra.RedisClient;
@@ -29,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisClient redisClient;
+    private final TokenRepository tokenRepository;
 
     public MyProfile getMyProfile(Long userId) {
         log.info("userId = {}의 프로필", userId);
@@ -114,5 +118,31 @@ public class UserService {
         String username = user.getUsername();
         map.put("username", username);
         return map;
+    }
+
+    @Transactional
+    public void saveToken(Long userId, String deviceId, String token) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+            tokenRepository.findByUser_UserIdAndDeviceId(userId, deviceId)
+                    .ifPresentOrElse(
+                            t -> {
+                                t.setToken(token);
+                            },
+                            () -> {
+                                Token t = Token.builder()
+                                        .user(user)
+                                        .deviceId(deviceId)
+                                        .token(token)
+                                        .build();
+                                tokenRepository.save(t);
+                            }
+                    );
+        } catch (DataIntegrityViolationException e){
+            tokenRepository.findByUser_UserIdAndDeviceId(userId, deviceId)
+                    .ifPresent(t -> t.setToken(token));
+        }
     }
 }
