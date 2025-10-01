@@ -18,23 +18,10 @@ public class FcmConfig {
     private String firebaseCredPath;
 
     @PostConstruct
-    public void initFirebaseSDK() throws Exception {
-        try (FileInputStream in = new FileInputStream(firebaseCredPath)) {
-            GoogleCredentials creds = GoogleCredentials.fromStream(in);
-            FirebaseOptions.Builder b = FirebaseOptions.builder().setCredentials(creds);
-
-            // credentials에서 projectId 추출해 명시적으로 주입(일부 환경에서 null인 경우가 있음)
-            String projectId = null;
-            if (creds instanceof com.google.auth.oauth2.ServiceAccountCredentials sac) {
-                projectId = sac.getProjectId();
-            }
-            if (projectId != null) {
-                b.setProjectId(projectId);
-            }
-
-            FirebaseOptions options = b.build();
-            FirebaseApp app = FirebaseApp.initializeApp(options);
-            log.info("Firebase initialized. projectId={}", app.getOptions().getProjectId());
-        }
+    public void initFirebaseSDK() throws Exception{
+        FirebaseOptions options = FirebaseOptions.builder()
+                .setCredentials(GoogleCredentials.fromStream(new FileInputStream(firebaseCredPath)))
+                .build();
+        FirebaseApp.initializeApp(options);
     }
 }
