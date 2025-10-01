@@ -59,6 +59,9 @@ dependencies {
 	// API Documentation (Swagger)
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
+	// firebase
+	implementation "com.google.firebase:firebase-admin:9.7.0" // 예시 버전, 최신으로 교체 가능
+
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

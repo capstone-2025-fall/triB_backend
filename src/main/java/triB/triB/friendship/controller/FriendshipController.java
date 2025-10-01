@@ -1,5 +1,6 @@
 package triB.triB.friendship.controller;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -59,7 +60,7 @@ public class FriendshipController {
     public ResponseEntity<ApiResponse<Void>> requestFriendship(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable(name = "userId") Long userId2
-    ){
+    ) throws FirebaseMessagingException {
         Long userId1 =  userPrincipal.getUserId();
         friendshipService.requestFriendshipToUser(userId1, userId2);
         return ApiResponse.created("친구 요청을 보냈습니다.", null);
@@ -76,7 +77,7 @@ public class FriendshipController {
     public ResponseEntity<ApiResponse<Void>> acceptFriendship(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable(name = "friendshipId") Long friendshipId
-    ){
+    ) throws FirebaseMessagingException {
         Long userId = userPrincipal.getUserId();
         friendshipService.acceptMyFriendship(userId, friendshipId);
         return ApiResponse.ok("친구 요청을 수락했습니다.", null);

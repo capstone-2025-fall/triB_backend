@@ -15,5 +15,5 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
 
     List<Friendship> findAllByAddressee_UserIdAndFriendshipStatusOrderByCreatedAtAsc(Long userId, FriendshipStatus status);
 
-    boolean existsByRequester_UserIdAndAddressee_UserIdAndFriendshipStatus(Long userId, Long addresseeId, FriendshipStatus status);
+    Friendship findByRequester_UserIdAndAddressee_UserIdAndFriendshipStatus(Long userId, Long addresseeId, FriendshipStatus status);
 }
