@@ -7,11 +7,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.expense.dto.*;
 import triB.triB.expense.entity.ExpenseCategory;
 import triB.triB.expense.service.ExpenseService;
 import triB.triB.global.response.ApiResponse;
+import triB.triB.global.security.UserPrincipal;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,9 +30,9 @@ public class ExpenseController {
     @PostMapping("/trips/{tripId}/expenses")
     public ResponseEntity<ApiResponse<ExpenseDetailsResponse>> createExpense(
             @Parameter(description = "여행 ID") @PathVariable Long tripId,
-            @Parameter(description = "사용자 ID") @RequestParam Long userId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
             @Valid @RequestBody ExpenseCreateRequest request) {
-        
+        Long userId = userPrincipal.getUserId();
         ExpenseDetailsResponse response = expenseService.createExpense(tripId, userId, request);
         return ApiResponse.created("지출 내역이 성공적으로 추가되었습니다.", response);
     }
