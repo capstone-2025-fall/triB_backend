@@ -58,8 +58,8 @@ public class AuthController {
     @PostMapping(value = "/email",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Void>> signup(
-            @RequestPart("photo") MultipartFile photo,
-            @RequestPart("meta") AuthRequest authRequest
+            @RequestPart(name = "photo", required = false) MultipartFile photo,
+            @RequestPart(name = "meta", required = true) AuthRequest authRequest
     ) {
         authService.signup(photo, authRequest);
         return ApiResponse.created("회원가입 성공", null);
@@ -80,8 +80,8 @@ public class AuthController {
     @PostMapping(value = "/complete-profile",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<AuthResponse>> completeProfile(
-            @RequestPart("photo") MultipartFile photo,
-            @RequestPart("meta") RegisterRequest registerRequest
+            @RequestPart(name = "photo", required = false) MultipartFile photo,
+            @RequestPart(name = "meta", required = true) RegisterRequest registerRequest
     ) {
         log.info("complete profile 요청");
         Long userId = authService.socialSignup(photo, registerRequest);
