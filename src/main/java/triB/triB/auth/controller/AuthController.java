@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
@@ -81,6 +83,7 @@ public class AuthController {
             @RequestPart("photo") MultipartFile photo,
             @RequestPart("meta") RegisterRequest registerRequest
     ) {
+        log.info("complete profile 요청");
         Long userId = authService.socialSignup(photo, registerRequest);
         AuthResponse response = authService.socialLogin(userId);
         return ApiResponse.created("소셜로그인 회원가입을 성공했습니다.", response);
