@@ -53,13 +53,14 @@ public class GoogleMapsService {
     public PlaceDetailsResponse getPlaceDetails(String placeId, String sessionToken) {
         try {
             log.info("장소 상세 정보 요청: placeId={}, sessionToken={}", placeId, sessionToken);
-            
+
             String response = googleMapsClient.placeDetails(placeId, sessionToken);
+            log.info("Google API 원본 응답: {}", response);
             PlaceDetailsResponse placeDetailsResponse = objectMapper.readValue(response, PlaceDetailsResponse.class);
-            
-            log.info("장소 상세 정보 조회 완료: {}", 
+
+            log.info("장소 상세 정보 조회 완료: {}",
                     placeDetailsResponse.getDisplayName() != null ? placeDetailsResponse.getDisplayName().getText() : "null");
-            
+
             return placeDetailsResponse;
         } catch (Exception e) {
             log.error("장소 상세 정보 조회 실패: placeId={}, sessionToken={}", placeId, sessionToken, e);

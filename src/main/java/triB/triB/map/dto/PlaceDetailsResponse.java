@@ -11,28 +11,24 @@ import java.util.List;
 public class PlaceDetailsResponse {
     
     private String id;
-    
+
     @JsonProperty("displayName")
     private DisplayName displayName;
-    
-    @JsonProperty("formattedAddress")
-    private String formattedAddress;
-    
+
     private Location location;
-    
-    private List<String> types;
-    
-    private Double rating;
-    
+
+    @JsonProperty("primaryType")
+    private String primaryType;
+
+    @JsonProperty("priceRange")
+    private PriceRange priceRange;
+
     @JsonProperty("regularOpeningHours")
     private OpeningHours regularOpeningHours;
-    
-    @JsonProperty("internationalPhoneNumber")
-    private String phoneNumber;
-    
-    @JsonProperty("websiteUri")
-    private String websiteUri;
-    
+
+    @JsonProperty("editorialSummary")
+    private EditorialSummary editorialSummary;
+
     @Getter
     @NoArgsConstructor
     public static class DisplayName {
@@ -52,8 +48,38 @@ public class PlaceDetailsResponse {
     public static class OpeningHours {
         @JsonProperty("openNow")
         private Boolean openNow;
-        
+
         @JsonProperty("weekdayDescriptions")
         private List<String> weekdayDescriptions;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class EditorialSummary {
+        private String text;
+        private String languageCode;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class PriceRange {
+        @JsonProperty("startPrice")
+        private Price startPrice;
+
+        @JsonProperty("endPrice")
+        private Price endPrice;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class Price {
+        @JsonProperty("currencyCode")
+        private String currencyCode;
+
+        @JsonProperty("units")
+        private String units;
+
+        @JsonProperty("nanos")
+        private Integer nanos;
     }
 }
