@@ -2,7 +2,7 @@ package triB.triB.schedule.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import triB.triB.chat.entity.Room;
+import triB.triB.room.entity.Room;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;

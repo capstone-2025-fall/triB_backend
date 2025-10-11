@@ -11,5 +11,4 @@ public class UserResponse {
     private Long userId;
     private String nickname;
     private String photoUrl;
-
 }
