@@ -1,9 +1,9 @@
-package triB.triB.chat.repository;
+package triB.triB.room.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import triB.triB.chat.entity.Room;
+import triB.triB.room.entity.Room;
 
 @Repository
 public interface RoomRepository extends JpaRepository<Room, Long> {

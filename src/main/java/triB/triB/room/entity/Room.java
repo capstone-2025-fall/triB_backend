@@ -1,4 +1,4 @@
-package triB.triB.chat.entity;
+package triB.triB.room.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +14,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "rooms")
+@Table(
+        name = "rooms",
+        indexes = {
+
+        }
+)
 public class Room {
     
     @Id
