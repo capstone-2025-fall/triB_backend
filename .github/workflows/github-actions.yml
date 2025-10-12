@@ -139,7 +139,9 @@ jobs:
             sudo docker compose --env-file .compose.env pull
             # 컨테이너 실행
             sudo docker compose --env-file .compose.env up -d
-          
-          
+
+            # 안쓰는 이미지 정리
+            sudo docker container prune -f
+            sudo docker image prune -a -f
 
    
