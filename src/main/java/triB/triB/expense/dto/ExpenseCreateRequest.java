@@ -38,7 +38,9 @@ public class ExpenseCreateRequest {
     
     @JsonProperty("num_participants")
     private Integer numParticipants = 1;
-    
+
     @JsonProperty("payment_method")
     private PaymentMethod paymentMethod = PaymentMethod.SEPARATE;
+
+    private String currency = "KRW";
 }

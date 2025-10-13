@@ -63,6 +63,7 @@ public class ExpenseService {
                 .payerUserId(finalPayerUserId)
                 .numParticipants(request.getNumParticipants())
                 .paymentMethod(request.getPaymentMethod())
+                .currency(request.getCurrency())
                 .build();
         
         Expense savedExpense = expenseRepository.save(expense);
@@ -124,7 +125,11 @@ public class ExpenseService {
         if (request.getNumParticipants() != null) {
             expense.setNumParticipants(request.getNumParticipants());
         }
-        
+
+        if (request.getCurrency() != null) {
+            expense.setCurrency(request.getCurrency());
+        }
+
         Expense updatedExpense = expenseRepository.save(expense);
         return mapToDetailsResponse(updatedExpense);
     }
@@ -196,6 +201,7 @@ public class ExpenseService {
                 .payerUserId(expense.getPayerUserId())
                 .numParticipants(expense.getNumParticipants())
                 .paymentMethod(expense.getPaymentMethod())
+                .currency(expense.getCurrency())
                 .build();
     }
 }

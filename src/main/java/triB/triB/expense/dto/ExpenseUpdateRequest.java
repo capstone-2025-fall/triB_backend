@@ -33,7 +33,9 @@ public class ExpenseUpdateRequest {
     
     @JsonProperty("num_participants")
     private Integer numParticipants;
-    
+
     @JsonProperty("payment_method")
     private PaymentMethod paymentMethod;
+
+    private String currency;
 }
