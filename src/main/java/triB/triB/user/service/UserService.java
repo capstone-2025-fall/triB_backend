@@ -10,10 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
-import triB.triB.auth.entity.IsAlarm;
-import triB.triB.auth.entity.Token;
-import triB.triB.auth.entity.User;
-import triB.triB.auth.entity.UserStatus;
+import triB.triB.auth.entity.*;
+import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.AwsS3Client;
@@ -33,6 +31,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RedisClient redisClient;
     private final TokenRepository tokenRepository;
+    private final OauthAccountRepository oauthAccountRepository;
 
     public MyProfile getMyProfile(Long userId) {
         log.info("userId = {}의 프로필", userId);
@@ -102,6 +101,11 @@ public class UserService {
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+        OauthAccount account;
+        if ((account = oauthAccountRepository.findByUser_UserId(userId)) != null)
+            oauthAccountRepository.delete(account);
+
         redisClient.deleteData("rf", String.valueOf(userId));
         s3Client.delete(user.getPhotoUrl());
         user.setUserStatus(UserStatus.DELETED);
