@@ -1,7 +1,6 @@
 package triB.triB.budget.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,18 +15,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class BudgetResponse {
 
-    @JsonProperty("budget_id")
     private Long budgetId;
 
     private BigDecimal amount;
 
     private String currency;
 
-    @JsonProperty("created_at")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
-    @JsonProperty("updated_at")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 }
