@@ -3,6 +3,7 @@ package triB.triB.expense.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import triB.triB.auth.entity.User;
 import triB.triB.schedule.entity.Trip;
 
@@ -16,7 +17,11 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "expenses")
+@Table(name = "expenses", indexes = {
+    @Index(name = "idx_exp_trip_date", columnList = "trip_id, expense_date"),
+    @Index(name = "idx_exp_trip_cat", columnList = "trip_id, category"),
+    @Index(name = "idx_exp_trip_user", columnList = "trip_id, user_id")
+})
 public class Expense {
     
     @Id
@@ -38,7 +43,7 @@ public class Expense {
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
     
-    @Column(name = "amount", nullable = false, precision = 10, scale = 2)
+    @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
     
     @Column(name = "category", nullable = false)
@@ -66,8 +71,16 @@ public class Expense {
     @Column(name = "payment_method", nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod = PaymentMethod.SEPARATE;
-    
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = "KRW";
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }
