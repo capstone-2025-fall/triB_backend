@@ -252,15 +252,26 @@ public class ExpenseService {
 
         return expenses.stream()
                 .map(expense -> {
-                    User payer = userRepository.findById(expense.getPayerUserId()).orElse(null);
-                    String payerName = (payer != null) ? payer.getNickname() : "알 수 없음";
+                    String settlementInfo = null;
+
+                    if (expense.getPaymentMethod() == PaymentMethod.TOGETHER) {
+                        if (expense.getPayerUserId().equals(userId)) {
+                            // 결제자가 본인일 때: "{numParticipants}명 → 나"
+                            settlementInfo = expense.getNumParticipants() + "명 → 나";
+                        } else {
+                            // 결제자가 타인일 때: "나 → {결제자닉네임}"
+                            User payer = userRepository.findById(expense.getPayerUserId()).orElse(null);
+                            String payerName = (payer != null) ? payer.getNickname() : "알 수 없음";
+                            settlementInfo = "나 → " + payerName;
+                        }
+                    }
+                    // SEPARATE일 때는 settlementInfo가 null로 유지됨
 
                     return ExpenseDailyItem.builder()
                             .expenseId(expense.getExpenseId())
                             .description(expense.getDescription())
                             .amount(expense.getAmount())
-                            .numParticipants(expense.getNumParticipants())
-                            .payer(payerName)
+                            .settlementInfo(settlementInfo)
                             .build();
                 })
                 .collect(Collectors.toList());

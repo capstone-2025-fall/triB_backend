@@ -12,10 +12,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExpenseDailyItem {
-    
+
     private Long expenseId;
     private String description;
     private BigDecimal amount;
-    private Integer numParticipants;
-    private String payer; // payer name
+    private String settlementInfo;
 }
