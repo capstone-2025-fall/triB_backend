@@ -9,6 +9,9 @@ import triB.triB.budget.dto.BudgetResponse;
 import triB.triB.budget.dto.BudgetUpdateRequest;
 import triB.triB.budget.entity.TripUserBudget;
 import triB.triB.budget.repository.TripUserBudgetRepository;
+import triB.triB.room.entity.UserRoomId;
+import triB.triB.room.repository.UserRoomRepository;
+import triB.triB.schedule.entity.Trip;
 import triB.triB.schedule.repository.TripRepository;
 
 @Service
@@ -19,12 +22,12 @@ public class BudgetService {
     private final TripUserBudgetRepository budgetRepository;
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
+    private final UserRoomRepository userRoomRepository;
 
     @Transactional
     public BudgetResponse createBudget(Long tripId, Long userId, BudgetCreateRequest request) {
-        // Validate trip exists
-        tripRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+        // Validate trip exists and user is participant
+        validateUserInTrip(tripId, userId);
 
         // Validate user exists
         userRepository.findById(userId)
@@ -48,6 +51,9 @@ public class BudgetService {
 
     @Transactional
     public BudgetResponse updateBudget(Long tripId, Long userId, BudgetUpdateRequest request) {
+        // Validate trip exists and user is participant
+        validateUserInTrip(tripId, userId);
+
         TripUserBudget budget = budgetRepository.findByTripIdAndUserId(tripId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("예산을 찾을 수 없습니다. 먼저 예산을 생성해주세요."));
 
@@ -64,9 +70,8 @@ public class BudgetService {
     }
 
     public BudgetResponse getMyBudget(Long tripId, Long userId) {
-        // Validate trip exists
-        tripRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+        // Validate trip exists and user is participant
+        validateUserInTrip(tripId, userId);
 
         TripUserBudget budget = budgetRepository.findByTripIdAndUserId(tripId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("예산을 찾을 수 없습니다."));
@@ -82,5 +87,22 @@ public class BudgetService {
                 .createdAt(budget.getCreatedAt())
                 .updatedAt(budget.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 사용자가 해당 여행의 참여자인지 검증
+     * Trip -> Room -> UserRoom 순으로 확인
+     */
+    private void validateUserInTrip(Long tripId, Long userId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+        Long roomId = trip.getRoomId();
+        UserRoomId userRoomId = new UserRoomId(userId, roomId);
+
+        boolean isParticipant = userRoomRepository.existsById(userRoomId);
+        if (!isParticipant) {
+            throw new IllegalArgumentException("해당 여행의 참여자만 접근할 수 있습니다.");
+        }
     }
 }

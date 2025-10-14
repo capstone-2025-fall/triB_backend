@@ -6,12 +6,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.budget.dto.BudgetCreateRequest;
 import triB.triB.budget.dto.BudgetResponse;
 import triB.triB.budget.dto.BudgetUpdateRequest;
 import triB.triB.budget.service.BudgetService;
 import triB.triB.global.response.ApiResponse;
+import triB.triB.global.security.UserPrincipal;
 
 @Tag(name = "Budget", description = "여행 예산 관리 API")
 @RestController
@@ -25,9 +27,10 @@ public class BudgetController {
     @PostMapping("/trips/{tripId}/budgets")
     public ResponseEntity<ApiResponse<BudgetResponse>> createBudget(
             @Parameter(description = "여행 ID") @PathVariable Long tripId,
-            @Parameter(description = "사용자 ID") @RequestParam Long userId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
             @Valid @RequestBody BudgetCreateRequest request) {
 
+        Long userId = userPrincipal.getUserId();
         BudgetResponse response = budgetService.createBudget(tripId, userId, request);
         return ApiResponse.created("예산이 성공적으로 생성되었습니다.", response);
     }
@@ -36,9 +39,10 @@ public class BudgetController {
     @PatchMapping("/trips/{tripId}/budgets")
     public ResponseEntity<ApiResponse<BudgetResponse>> updateBudget(
             @Parameter(description = "여행 ID") @PathVariable Long tripId,
-            @Parameter(description = "사용자 ID") @RequestParam Long userId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
             @Valid @RequestBody BudgetUpdateRequest request) {
 
+        Long userId = userPrincipal.getUserId();
         BudgetResponse response = budgetService.updateBudget(tripId, userId, request);
         return ApiResponse.ok("예산이 성공적으로 수정되었습니다.", response);
     }
@@ -47,8 +51,9 @@ public class BudgetController {
     @GetMapping("/trips/{tripId}/budgets/me")
     public ResponseEntity<ApiResponse<BudgetResponse>> getMyBudget(
             @Parameter(description = "여행 ID") @PathVariable Long tripId,
-            @Parameter(description = "사용자 ID") @RequestParam Long userId) {
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
+        Long userId = userPrincipal.getUserId();
         BudgetResponse response = budgetService.getMyBudget(tripId, userId);
         return ApiResponse.ok("예산 조회가 완료되었습니다.", response);
     }

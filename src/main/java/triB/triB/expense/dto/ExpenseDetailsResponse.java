@@ -25,10 +25,10 @@ public class ExpenseDetailsResponse {
     
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate expenseDate;
-    
-    @JsonProperty("payer_user_id")
-    private Long payerUserId;
-    
+
+    @JsonProperty("payer_nickname")
+    private String payerNickname;
+
     @JsonProperty("num_participants")
     private Integer numParticipants;
 

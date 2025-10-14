@@ -32,10 +32,11 @@ public class ExpenseCreateRequest {
     @NotNull(message = "지출 날짜는 필수입니다.")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate expenseDate;
-    
+
     // TOGETHER일 때만 필수, SEPARATE일 때는 null 가능
-    private Long payerUserId;
-    
+    @JsonProperty("payer_nickname")
+    private String payerNickname;
+
     @JsonProperty("num_participants")
     private Integer numParticipants = 1;
 
