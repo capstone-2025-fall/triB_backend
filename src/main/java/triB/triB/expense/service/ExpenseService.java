@@ -44,6 +44,7 @@ public class ExpenseService {
         // PaymentMethod별 로직 처리
         Long finalPayerUserId;
         BigDecimal finalAmount = request.getAmount();
+        Boolean isSettled;
 
         if (request.getPaymentMethod() == PaymentMethod.TOGETHER) {
             // TOGETHER일 때는 결제자 닉네임이 필수
@@ -60,9 +61,15 @@ public class ExpenseService {
             }
             finalAmount = request.getAmount()
                     .divide(BigDecimal.valueOf(request.getNumParticipants()), 2, RoundingMode.HALF_UP);
+
+            // TOGETHER일 때는 정산 미완료
+            isSettled = false;
         } else {
             // SEPARATE일 때는 기록자가 결제자
             finalPayerUserId = userId;
+
+            // SEPARATE일 때는 정산 완료
+            isSettled = true;
         }
 
         Expense expense = Expense.builder()
@@ -76,6 +83,7 @@ public class ExpenseService {
                 .numParticipants(request.getNumParticipants())
                 .paymentMethod(request.getPaymentMethod())
                 .currency(request.getCurrency())
+                .isSettled(isSettled)
                 .build();
         
         Expense savedExpense = expenseRepository.save(expense);
@@ -272,6 +280,7 @@ public class ExpenseService {
                             .description(expense.getDescription())
                             .amount(expense.getAmount())
                             .settlementInfo(settlementInfo)
+                            .isSettled(expense.getIsSettled())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -327,6 +336,31 @@ public class ExpenseService {
         return TripDateResponse.builder()
                 .startDate(room.getStartDate())
                 .endDate(room.getEndDate())
+                .build();
+    }
+
+    /**
+     * 정산 상태 토글 (완료 <-> 미완료)
+     */
+    @Transactional
+    public SettlementStatusResponse toggleSettlementStatus(Long tripId, Long expenseId, Long userId) {
+        // Validate trip exists and user is participant
+        validateUserInTrip(tripId, userId);
+
+        Expense expense = expenseRepository.findByExpenseIdAndTripId(expenseId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("지출 내역을 찾을 수 없습니다."));
+
+        // 본인이 작성한 지출만 수정 가능
+        if (!expense.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("본인이 작성한 지출만 정산 상태를 변경할 수 있습니다.");
+        }
+
+        // 정산 상태 토글
+        expense.setIsSettled(!expense.getIsSettled());
+
+        Expense updatedExpense = expenseRepository.save(expense);
+        return SettlementStatusResponse.builder()
+                .isSettled(updatedExpense.getIsSettled())
                 .build();
     }
 

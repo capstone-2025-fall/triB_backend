@@ -76,6 +76,10 @@ public class Expense {
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "KRW";
 
+    @Builder.Default
+    @Column(name = "is_settled", nullable = false)
+    private Boolean isSettled = false;
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

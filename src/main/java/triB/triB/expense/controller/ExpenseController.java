@@ -140,4 +140,16 @@ public class ExpenseController {
         TripDateResponse response = expenseService.getTripDates(tripId, userId);
         return ApiResponse.ok("여행 날짜 조회가 완료되었습니다.", response);
     }
+
+    @Operation(summary = "정산 상태 토글", description = "지출의 정산 상태를 완료/미완료로 전환합니다.")
+    @PatchMapping("/trips/{tripId}/expenses/{expenseId}/settlement")
+    public ResponseEntity<ApiResponse<SettlementStatusResponse>> toggleSettlementStatus(
+            @Parameter(description = "여행 ID") @PathVariable Long tripId,
+            @Parameter(description = "지출 ID") @PathVariable Long expenseId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        Long userId = userPrincipal.getUserId();
+        SettlementStatusResponse response = expenseService.toggleSettlementStatus(tripId, expenseId, userId);
+        return ApiResponse.ok("정산 상태가 성공적으로 변경되었습니다.", response);
+    }
 }
