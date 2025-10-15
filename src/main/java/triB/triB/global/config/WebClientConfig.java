@@ -11,9 +11,18 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientConfig {
 
     @Bean
-    public WebClient webClient() {
+    public WebClient geminiWebClient(@Value("${gemini.base-url}") String baseUrl) {
         return WebClient.builder()
+                .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
+    @Bean
+    public WebClient kakaoWebClient(@Value("${kakao.admin-key}") String kakaoAdminKey) {
+        return WebClient.builder()
+                .baseUrl("https://kapi.kakao.com")
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + kakaoAdminKey)
                 .build();
     }
 }

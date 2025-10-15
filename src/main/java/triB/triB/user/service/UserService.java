@@ -3,13 +3,23 @@ package triB.triB.user.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import triB.triB.auth.dto.UnlinkResponse;
 import triB.triB.auth.entity.*;
 import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.TokenRepository;
@@ -32,6 +42,7 @@ public class UserService {
     private final RedisClient redisClient;
     private final TokenRepository tokenRepository;
     private final OauthAccountRepository oauthAccountRepository;
+    private final @Qualifier("kakaoWebClient") WebClient kakaoWebClient;
 
     public MyProfile getMyProfile(Long userId) {
         log.info("userId = {}의 프로필", userId);
@@ -103,8 +114,16 @@ public class UserService {
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
         OauthAccount account;
-        if ((account = oauthAccountRepository.findByUser_UserId(userId)) != null)
+        if ((account = oauthAccountRepository.findByUser_UserId(userId)) != null) {
+            log.info("oauth 존재 확인 완료");
+            UnlinkResponse response;
+            if (account.getProvider().equals("kakao")) {
+                log.info("kakao와 연결 끊기");
+                response = unlinkKakao(account.getProviderUserId());
+                log.info("kakao와 연결 끊기 성공");
+            }
             oauthAccountRepository.delete(account);
+        }
 
         redisClient.deleteData("rf", String.valueOf(userId));
         s3Client.delete(user.getPhotoUrl());
@@ -112,6 +131,9 @@ public class UserService {
         user.setEmail(null);
         user.setUsername(null);
         userRepository.save(user);
+        log.info("user 상태변경 완료");
+
+
         log.info("userId = {} 인 유저가 탈퇴했습니다.", userId);
     }
 
@@ -148,5 +170,18 @@ public class UserService {
             tokenRepository.findByUser_UserIdAndDeviceId(userId, deviceId)
                     .ifPresent(t -> t.setToken(token));
         }
+    }
+
+    private UnlinkResponse unlinkKakao(String providerUserId){
+        return kakaoWebClient.post()
+                .uri("/v1/user/unlink")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(BodyInserters
+                        .fromFormData("target_id_type", "user_id")
+                        .with("target_id", providerUserId))
+                .retrieve()
+                .bodyToMono(UnlinkResponse.class)
+                .block();
+
     }
 }
