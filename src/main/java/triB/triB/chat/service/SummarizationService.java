@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -21,7 +22,6 @@ import java.util.stream.IntStream;
 @Slf4j
 public class SummarizationService {
 
-    private final WebClient webClient;
     @Value("${gemini.base-url}")
     private String baseUrl;
 
@@ -30,6 +30,8 @@ public class SummarizationService {
 
     @Value("${gemini.api-key}")
     private String apiKey;
+
+    private final @Qualifier("geminiWebClient") WebClient geminiWebClient;
 
     // todo Mono 추가하기
     public Mono<String> summarizeChat(List<String> messages) {
@@ -79,10 +81,10 @@ public class SummarizationService {
                 .build();
 
         // Gemini와 통신해야할 주소
-        String url = baseUrl + "/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+        String url = "/v1beta/models/" + model + ":generateContent?key=" + apiKey;
 
         // Gemini와 통신하는 과정
-        Mono<String> response = webClient.post()
+        Mono<String> response = geminiWebClient.post()
                 .uri(url)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)

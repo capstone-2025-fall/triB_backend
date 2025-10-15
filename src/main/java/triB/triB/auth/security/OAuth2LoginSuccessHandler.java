@@ -24,6 +24,7 @@ import triB.triB.auth.dto.AuthResponse;
 import triB.triB.auth.dto.RegisterResponse;
 import triB.triB.auth.entity.OauthAccount;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.RedisClient;
