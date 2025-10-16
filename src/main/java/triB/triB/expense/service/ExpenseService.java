@@ -264,8 +264,8 @@ public class ExpenseService {
 
                     if (expense.getPaymentMethod() == PaymentMethod.TOGETHER) {
                         if (expense.getPayerUserId().equals(userId)) {
-                            // 결제자가 본인일 때: "{numParticipants}명 → 나"
-                            settlementInfo = expense.getNumParticipants() + "명 → 나";
+                            // 결제자가 본인일 때: "{numParticipants-1}명 → 나"
+                            settlementInfo = (expense.getNumParticipants() - 1) + "명 → 나";
                         } else {
                             // 결제자가 타인일 때: "나 → {결제자닉네임}"
                             User payer = userRepository.findById(expense.getPayerUserId()).orElse(null);
@@ -279,6 +279,7 @@ public class ExpenseService {
                             .expenseId(expense.getExpenseId())
                             .description(expense.getDescription())
                             .amount(expense.getAmount())
+                            .category(expense.getCategory())
                             .settlementInfo(settlementInfo)
                             .isSettled(expense.getIsSettled())
                             .build();
