@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "message_places",
         indexes = {
-
+                @Index(name = "idx_room_id", columnList = "room_id")
         }
 )
 public class MessagePlace {

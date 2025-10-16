@@ -22,6 +22,10 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
             "order by (select m.createdAt from Message m where m.room = ur.room order by m.createdAt desc limit 1) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserIdAndRoom_RoomName(@Param("userId") Long userId, @Param("roomName") String roomName);
 
+
+    @Query("select ur from UserRoom ur join fetch ur.user where ur.room.roomId in :roomIds order by ur.user.nickname asc")
+    List<UserRoom> findAllWithUsersByRoomIds(@Param("roomIds") List<Long> roomIds);
+
     @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId order by ur.user.nickname asc")
     List<User> findUsersByRoomId(@Param("roomId") Long roomId);
 }

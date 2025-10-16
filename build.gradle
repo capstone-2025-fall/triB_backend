@@ -57,7 +57,7 @@ dependencies {
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
 	// API Documentation (Swagger)
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
 	// firebase
 	implementation "com.google.firebase:firebase-admin:9.7.0" // 예시 버전, 최신으로 교체 가능
@@ -65,6 +65,10 @@ dependencies {
 	// Gemini
 	implementation "com.google.genai:google-genai:1.8.0"
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	//WebSocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.security:spring-security-messaging'
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
