@@ -33,7 +33,7 @@ public class ExpenseCreateRequest {
     private LocalDate expenseDate;
 
     // TOGETHER일 때만 필수, SEPARATE일 때는 null 가능
-    private String payerNickname;
+    private Long payerUserId;
 
     private Integer numParticipants = 1;
 

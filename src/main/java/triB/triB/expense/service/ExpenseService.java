@@ -47,13 +47,13 @@ public class ExpenseService {
         Boolean isSettled;
 
         if (request.getPaymentMethod() == PaymentMethod.TOGETHER) {
-            // TOGETHER일 때는 결제자 닉네임이 필수
-            if (request.getPayerNickname() == null || request.getPayerNickname().trim().isEmpty()) {
-                throw new IllegalArgumentException("함께결제일 때는 결제자 이름이 필수입니다.");
+            // TOGETHER일 때는 결제자 userId가 필수
+            if (request.getPayerUserId() == null) {
+                throw new IllegalArgumentException("함께결제일 때는 결제자 ID가 필수입니다.");
             }
-            // 여행 참여자 중에서 닉네임으로 결제자 찾기
-            User payer = findPayerByNickname(tripId, request.getPayerNickname());
-            finalPayerUserId = payer.getUserId();
+            // 결제자가 여행 참여자인지 검증
+            validateUserInTrip(tripId, request.getPayerUserId());
+            finalPayerUserId = request.getPayerUserId();
 
             // TOGETHER일 때는 총 금액을 참여자 수로 나누어 1인당 금액 계산
             if (request.getNumParticipants() == null || request.getNumParticipants() <= 0) {
@@ -143,22 +143,22 @@ public class ExpenseService {
             expense.setPaymentMethod(newPaymentMethod);
 
             if (newPaymentMethod == PaymentMethod.TOGETHER) {
-                // TOGETHER로 변경 시 결제자 닉네임이 필요
-                if (request.getPayerNickname() != null && !request.getPayerNickname().trim().isEmpty()) {
-                    User payer = findPayerByNickname(tripId, request.getPayerNickname());
-                    expense.setPayerUserId(payer.getUserId());
+                // TOGETHER로 변경 시 결제자 userId가 필요
+                if (request.getPayerUserId() != null) {
+                    validateUserInTrip(tripId, request.getPayerUserId());
+                    expense.setPayerUserId(request.getPayerUserId());
                 } else if (expense.getPayerUserId() == null) {
-                    throw new IllegalArgumentException("함께결제로 변경할 때는 결제자 이름이 필요합니다.");
+                    throw new IllegalArgumentException("함께결제로 변경할 때는 결제자 ID가 필요합니다.");
                 }
             } else {
                 // SEPARATE로 변경 시 기록자가 결제자
                 expense.setPayerUserId(expense.getUserId());
             }
-        } else if (request.getPayerNickname() != null && !request.getPayerNickname().trim().isEmpty()) {
+        } else if (request.getPayerUserId() != null) {
             // PaymentMethod 변경 없이 결제자만 변경하는 경우
             if (expense.getPaymentMethod() == PaymentMethod.TOGETHER) {
-                User payer = findPayerByNickname(tripId, request.getPayerNickname());
-                expense.setPayerUserId(payer.getUserId());
+                validateUserInTrip(tripId, request.getPayerUserId());
+                expense.setPayerUserId(request.getPayerUserId());
             } else {
                 throw new IllegalArgumentException("각자결제에서는 결제자를 변경할 수 없습니다.");
             }
@@ -307,9 +307,10 @@ public class ExpenseService {
         // UserRoom에서 해당 Room의 모든 참여자 조회
         List<User> participants = userRoomRepository.findUsersByRoomId(roomId);
 
-        // DTO로 변환 (닉네임만 포함)
+        // DTO로 변환 (userId와 닉네임 포함)
         return participants.stream()
                 .map(user -> TripParticipantResponse.builder()
+                        .userId(user.getUserId())
                         .nickname(user.getNickname())
                         .build())
                 .collect(Collectors.toList());
@@ -399,24 +400,4 @@ public class ExpenseService {
         }
     }
 
-    /**
-     * 여행 참여자 중에서 닉네임으로 결제자 찾기
-     * 닉네임은 고유하지 않으므로, 해당 여행의 참여자 목록 내에서만 검색
-     */
-    private User findPayerByNickname(Long tripId, String nickname) {
-        // Trip에서 roomId 조회
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
-
-        Long roomId = trip.getRoomId();
-
-        // UserRoom에서 해당 Room의 모든 참여자 조회
-        List<User> participants = userRoomRepository.findUsersByRoomId(roomId);
-
-        // 참여자 중에서 닉네임으로 검색
-        return participants.stream()
-                .filter(user -> user.getNickname().equals(nickname))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("해당 여행에 '" + nickname + "' 닉네임을 가진 참여자를 찾을 수 없습니다."));
-    }
 }

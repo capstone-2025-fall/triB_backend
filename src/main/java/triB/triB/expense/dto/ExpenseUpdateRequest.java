@@ -28,7 +28,7 @@ public class ExpenseUpdateRequest {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate expenseDate;
 
-    private String payerNickname;
+    private Long payerUserId;
 
     private Integer numParticipants;
 
