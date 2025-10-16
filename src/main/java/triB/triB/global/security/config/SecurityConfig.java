@@ -60,8 +60,8 @@ public class SecurityConfig {
                             "/actuator/health",
                             "/api/v1/auth/**",
                             "/oauth2/authorization/**",
-                            "/login/oauth2/code/**"
-//                            "/api/v1/trips/**"
+                            "/login/oauth2/code/**",
+                            "/api/v1/trips/**"
                     ).permitAll()
                         .anyRequest().authenticated()
                 )
