@@ -36,12 +36,14 @@ public class RoomService {
     private final UserRepository userRepository;
     private final RoomReadStateRepository roomReadStateRepository;
 
+    @Transactional(readOnly = true)
     public List<RoomsResponse> getRoomList(Long userId){
         List<UserRoom> userRooms = userRoomRepository.findAllWithRoomAndUsersByUser_UserId(userId);
         log.info("로그인한 유저의 room 목록 조회");
         return roomList(userRooms, userId);
     }
 
+    @Transactional(readOnly = true)
     public List<RoomsResponse> searchRoomList(Long userId, String content){
         List<UserRoom> userRooms = userRoomRepository.findAllWithRoomAndUsersByUser_UserIdAndRoom_RoomName(userId, content);
         log.info("로그인한 유저가 검색하는 room 목록 조회");
@@ -65,6 +67,7 @@ public class RoomService {
         return responses;
     }
 
+    @Transactional
     public RoomResponse makeChatRoom(Long userId, RoomRequest roomRequest) {
 
         Room room = Room.builder()
@@ -110,18 +113,16 @@ public class RoomService {
         // 1. 모든 방 ID를 가져오기
         List<Room> rooms = userRooms.stream()
                 .map(UserRoom::getRoom)
-                .distinct()
                 .toList();
-
 
         List<Long> roomIds = rooms.stream()
                 .map(Room::getRoomId)
                 .toList();
 
         // 2. 모든 방의 사용자 정보를 단일 쿼리로 한번에 가져오기
-        List<UserRoom> allUserRooms = userRoomRepository.findAllWithUsersByRoomIds(roomIds);
+        List<UserRoom> allUsersInRoom = userRoomRepository.findAllWithUsersByRoomIds(roomIds);
 
-        Map<Long, List<String>> roomPhotoMap = allUserRooms.stream()
+        Map<Long, List<String>> roomPhotoMap = allUsersInRoom.stream()
                 .collect(Collectors.groupingBy(
                         ur -> ur.getRoom().getRoomId(),
                         LinkedHashMap::new,
@@ -159,6 +160,7 @@ public class RoomService {
             totalCounts.forEach(row -> notReadMessageTotalMap.put((Long) row[0], ((Number) row[1]).intValue()));
         }
 
+        // todo N+1 쿼리 문제 발생
         // 읽음 상태가 있는 방들의 전체 메세지 수 가져옴
         if (!roomsWithReadState.isEmpty()) {
             for (Long roomId : roomsWithReadState) {
