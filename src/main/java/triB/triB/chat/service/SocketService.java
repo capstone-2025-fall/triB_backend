@@ -14,6 +14,7 @@
 //import triB.triB.chat.entity.MessageType;
 //import triB.triB.chat.repository.MessageRepository;
 //import triB.triB.global.fcm.FcmSendRequest;
+//import triB.triB.global.fcm.FcmSender;
 //import triB.triB.global.fcm.RequestType;
 //import triB.triB.room.entity.Room;
 //import triB.triB.room.entity.UserRoom;
@@ -31,6 +32,7 @@
 //    private final UserRepository userRepository;
 //    private final UserRoomRepository userRoomRepository;
 //    private final TokenRepository tokenRepository;
+//    private final FcmSender fcmSender;
 //
 //    @Transactional
 //    public MessageResponse sendMessageToRoom(Long userId, Long roomId, String content){
@@ -51,7 +53,7 @@
 //
 //        sendMessagePushNotification(roomId, message);
 //
-//        return
+//        return null;
 //    }
 //
 //    private boolean isUserConnected(Long userId) {
