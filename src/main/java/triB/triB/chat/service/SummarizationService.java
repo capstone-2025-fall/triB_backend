@@ -95,7 +95,7 @@ public class SummarizationService {
                 {
                     "summarize": "대한민국 서울 여행으로, 가성비와 미식을 중시하며 박물관 전시와 야경을 즐기고 대중교통을 활용해 도심 명소를 여유로운 페이스로 둘러보고 싶다",
                     "travelMode": "TRANSIT",
-                    "itinerary": "[1일차] 경복궁 방문 후 북촌 한옥마을 이동, 이후 광장시장, [2일차] 국립중앙박물관 관람 후 남산 서울타워 야경 이동, [계획] 홍대 거리 산책 후 합정 카페 방문",
+                    "itinerary": "[1일차] 경복궁 방문 후 북촌 한옥마을 이동, 점심 광장시장에서 비빔밥, 저녁 냉면, [2일차] 국립중앙박물관 관람 후 남산 서울타워 야경 이동 저녁 명동 칼국수, [계획] 홍대 거리 산책 후 합정 카페 방문",
                     "details": {
                 		"airports": ["인천국제공항(1일차 도착)", "김포국제공항(마지막날 출발)"],
                         "accommodations": ["명동 00 호텔"],
@@ -153,11 +153,16 @@ public class SummarizationService {
                 .map(body -> {
                     try {
                         ObjectMapper mapper = new ObjectMapper();
-
                         JsonNode root = mapper.readTree(body);
+
                         String text = root.at("/candidates/0/content/parts/0/text").asText();
 
-                        return mapper.readValue(text, GeminiResponse.class);
+                        String jsonString = text.trim()
+                                .replaceAll("```json", "") // 시작 부분의 ```json 제거
+                                .replaceAll("```", "")     // 끝 부분의 ``` 제거
+                                .trim(); // 다시 한번 앞뒤 공백 및 개행 문자 제거
+
+                        return mapper.readValue(jsonString, GeminiResponse.class);
                     } catch (Exception e) {
                         log.error("왜오류", e);
                         throw new RuntimeException("Gemini 응답 파싱에 실패했습니다."); // todo 자세히 어떤에런지 요약 적어야할듯

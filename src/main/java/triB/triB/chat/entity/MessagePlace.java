@@ -32,23 +32,8 @@ public class MessagePlace {
     @ManyToOne
     private Room room;
 
-    @Column(name = "source", nullable = false)
-    private Source source;
-
-    @Column(name = "place_id", nullable = false)
-    private String placeId;
-
-    @Column(name = "latitude", nullable = false)
-    private Double latitude;
-
-    @Column(name = "longitude", nullable = false)
-    private Double longitude;
-
     @Column(name = "place_tag", nullable = true)
     private PlaceTag placeTag;
-
-    @Column(name = "tag_source", nullable = false)
-    private TagSource tagSource;
 
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
