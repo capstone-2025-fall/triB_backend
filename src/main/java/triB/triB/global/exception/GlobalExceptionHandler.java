@@ -16,6 +16,14 @@ import triB.triB.global.response.ApiResponse;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e){
+        return ApiResponse.fail(
+                e.getErrorCode().getHttpStatus(),
+                e.getErrorCode().getCode(),
+                e.getErrorCode().getMessage()
+        );
+    }
     /**
      * 요청 검증(@Valid) 실패/바인딩 실패 공통 처리
      */
