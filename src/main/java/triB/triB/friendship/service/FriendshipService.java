@@ -107,10 +107,15 @@ public class FriendshipService {
         User addressee = userRepository.findById(userId2)
                 .orElseThrow(() -> new EntityNotFoundException("친구 요청을 보낼 유저가 존재하지 않습니다."));
 
-        Friendship f = friendshipRepository.findByRequester_UserIdAndAddressee_UserIdAndFriendshipStatus(userId1, userId2, FriendshipStatus.REJECTED);
+        Friendship f1 = friendshipRepository.findByRequester_UserIdAndAddressee_UserIdAndFriendshipStatus(userId1, userId2, FriendshipStatus.REJECTED);
+        Friendship f2 = friendshipRepository.findByRequester_UserIdAndAddressee_UserIdAndFriendshipStatus(userId2, userId1, FriendshipStatus.REJECTED);
 
-        if (f != null) {
-            friendshipRepository.delete(f);
+        if (f1 != null) {
+            friendshipRepository.delete(f1);
+        }
+
+        if (f2 != null) {
+            friendshipRepository.delete(f2);
         }
 
         // todo 에러 수정
@@ -130,25 +135,25 @@ public class FriendshipService {
 
         friendshipRepository.save(friendship);
 
-        // todo FCM 메세지 알림 보내기 userId2에게
-        List<Token> token = tokenRepository.findAllByUser_UserId(userId2);
-
-        if (token.isEmpty()) {
-            throw new RuntimeException("토큰이 저장되지 않았습니다.");
-        }
-
-        for (Token t : token) {
-            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                    .requestType(RequestType.FRIEND_REQUEST)
-                    .id(0L)
-                    .title("TriB")
-                    .content(requester.getNickname()+" 님이 나에게 친구를 신청했어요!")
-                    .image(tribImage)
-                    .token(t.getToken())
-                    .build();
-
-            fcmSender.sendPushNotification(fcmSendRequest);
-        }
+//        // todo FCM 메세지 알림 보내기 userId2에게
+//        List<Token> token = tokenRepository.findAllByUser_UserId(userId2);
+//
+//        if (token.isEmpty()) {
+//            throw new RuntimeException("토큰이 저장되지 않았습니다.");
+//        }
+//
+//        for (Token t : token) {
+//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+//                    .requestType(RequestType.FRIEND_REQUEST)
+//                    .id(0L)
+//                    .title("TriB")
+//                    .content(requester.getNickname()+" 님이 나에게 친구를 신청했어요!")
+//                    .image(tribImage)
+//                    .token(t.getToken())
+//                    .build();
+//
+//            fcmSender.sendPushNotification(fcmSendRequest);
+//        }
     }
 
     // 내게 온 요청 확인
