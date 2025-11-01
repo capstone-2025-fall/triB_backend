@@ -21,6 +21,8 @@ import triB.triB.friendship.entity.Friendship;
 import triB.triB.friendship.entity.FriendshipStatus;
 import triB.triB.friendship.repository.FriendRepository;
 import triB.triB.friendship.repository.FriendshipRepository;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.fcm.FcmSendRequest;
 import triB.triB.global.fcm.FcmSender;
 import triB.triB.global.fcm.RequestType;
@@ -120,12 +122,12 @@ public class FriendshipService {
 
         // todo 에러 수정
         if (friendshipRepository.existsByRequester_UserIdAndAddressee_UserId(userId1, userId2)) {
-            throw new RuntimeException("이미 친구요청을 보낸 유저입니다.");
+            throw new CustomException(ErrorCode.CONFLICT_FRIENDSHIP_TO_OTHER);
         }
 
         // requester가 상대고, addressee가 나인 경우 = 이미 유저가 나에게 친구추가를 보낸 경우
         if (friendshipRepository.existsByRequester_UserIdAndAddressee_UserId(userId2, userId1))
-            throw new DataIntegrityViolationException("상대가 이미 보낸 친구 요청이 대기 중입니다. 수신함에서 확인하세요.");
+            throw new CustomException(ErrorCode.CONFLICT_FRIENDSHIP_TO_ME);
 
         Friendship friendship = Friendship.builder()
                 .requester(requester)
@@ -139,7 +141,7 @@ public class FriendshipService {
 //        List<Token> token = tokenRepository.findAllByUser_UserId(userId2);
 //
 //        if (token.isEmpty()) {
-//            throw new RuntimeException("토큰이 저장되지 않았습니다.");
+//            throw new CustomException(ErrorCode.NO_FCM_TOKEN);
 //        }
 //
 //        for (Token t : token) {
@@ -194,25 +196,25 @@ public class FriendshipService {
         friendRepository.save(friend1);
         friendRepository.save(friend2);
 
-        // todo FCM 메세지 알림 보내기 friendship.getRequester
-        List<Token> token = tokenRepository.findAllByUser_UserId(friendship.getRequester().getUserId());
-
-        if (token.isEmpty()) {
-            throw new RuntimeException("토큰이 저장되지 않았습니다.");
-        }
-
-        for (Token t : token) {
-            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                    .requestType(RequestType.FRIEND_ACCEPTED)
-                    .id(0L)
-                    .title("TriB")
-                    .content(friendship.getRequester().getNickname()+" 님과 친구가 되었어요!")
-                    .image(tribImage)
-                    .token(t.getToken())
-                    .build();
-
-            fcmSender.sendPushNotification(fcmSendRequest);
-        }
+//        // todo FCM 메세지 알림 보내기 friendship.getRequester
+//        List<Token> token = tokenRepository.findAllByUser_UserId(friendship.getRequester().getUserId());
+//
+//        if (token.isEmpty()) {
+//            throw new CustomException(ErrorCode.NO_FCM_TOKEN);
+//        }
+//
+//        for (Token t : token) {
+//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+//                    .requestType(RequestType.FRIEND_ACCEPTED)
+//                    .id(0L)
+//                    .title("TriB")
+//                    .content(friendship.getRequester().getNickname()+" 님과 친구가 되었어요!")
+//                    .image(tribImage)
+//                    .token(t.getToken())
+//                    .build();
+//
+//            fcmSender.sendPushNotification(fcmSendRequest);
+//        }
     }
 
     // 내게 온 친구요청 거절
