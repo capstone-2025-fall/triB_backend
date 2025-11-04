@@ -84,7 +84,7 @@ public class FriendshipService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 아이디의 유저가 존재하지 않습니다."));
 
         User me = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("로그인한 유저의 아이디가 틀렸습니다.."));
+                .orElseThrow(() -> new EntityNotFoundException("로그인한 유저의 아이디가 틀렸습니다."));
 
         if (me.equals(user)) {
             return null;

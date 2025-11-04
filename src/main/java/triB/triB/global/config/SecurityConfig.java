@@ -1,4 +1,4 @@
-package triB.triB.global.security.config;
+package triB.triB.global.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -15,11 +15,11 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.OncePerRequestFilter;
 import triB.triB.auth.security.OAuth2LoginSuccessHandler;
 import triB.triB.global.exception.ExceptionHandlerFilter;
-import triB.triB.global.security.jwt.JwtAuthenticationFilter;
+import triB.triB.global.security.JwtAuthenticationFilter;
 
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -61,7 +61,8 @@ public class SecurityConfig {
                             "/api/v1/auth/**",
                             "/oauth2/authorization/**",
                             "/login/oauth2/code/**",
-                            "/api/v1/trips/**"
+                            "/api/v1/trips/**",
+                            "/ws/**"
                     ).permitAll()
                         .anyRequest().authenticated()
                 )

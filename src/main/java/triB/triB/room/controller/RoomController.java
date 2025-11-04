@@ -62,4 +62,8 @@ public class RoomController {
         RoomResponse room = roomService.makeChatRoom(userId, roomRequest);
         return ApiResponse.created("채팅방을 생성했습니다.", room);
     }
+
+    // todo 채팅방 나가기
+
+    // todo 채팅방 수정하기
 }

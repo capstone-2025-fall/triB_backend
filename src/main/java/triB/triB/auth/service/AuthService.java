@@ -19,14 +19,13 @@ import triB.triB.auth.dto.AuthRequest;
 import triB.triB.auth.dto.AuthResponse;
 import triB.triB.auth.dto.RegisterRequest;
 import triB.triB.auth.entity.OauthAccount;
-import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.global.infra.AwsS3Client;
-import triB.triB.global.security.jwt.JwtProvider;
+import triB.triB.global.security.JwtProvider;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;

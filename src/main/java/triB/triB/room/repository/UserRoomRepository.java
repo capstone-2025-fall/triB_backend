@@ -28,4 +28,6 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
 
     @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId order by ur.user.nickname asc")
     List<User> findUsersByRoomId(@Param("roomId") Long roomId);
+
+    boolean existsByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
 }

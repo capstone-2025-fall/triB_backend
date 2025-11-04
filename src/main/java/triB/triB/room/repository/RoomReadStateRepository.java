@@ -15,4 +15,6 @@ public interface RoomReadStateRepository extends JpaRepository<RoomReadState, Ro
     // 여러 방에 대한 마지막 읽은 메시지 ID를 한꺼번에 조회
     @Query("SELECT r.room.roomId, r.lastReadMessageId FROM RoomReadState r WHERE r.room.roomId IN :roomIds AND r.user.userId = :userId")
     List<Object[]> findLastReadMessageIdsByRoomIdInAndUserId(@Param("roomIds") List<Long> roomIds, @Param("userId") Long userId);
+
+    RoomReadState findByRoom_RoomIdAndUser_UserId(Long roomId, Long userId);
 }

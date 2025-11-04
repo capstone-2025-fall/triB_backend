@@ -32,8 +32,8 @@ public class Schedule {
     @Column(name = "date", nullable = false)
     private LocalDate date;
 
-    @Column(name = "order", nullable = false)
-    private Integer order;
+    @Column(name = "visit_order", nullable = false)
+    private Integer visitOrder;
 
     @Column(name = "place_name", nullable = false)
     private String placeName;
