@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "messages",
         indexes = {
-                @Index(name = "idx_room_id", columnList = "room_id")
+                @Index(name = "idx_room_id", columnList = "room_id"),
+                @Index(name = "idx_created_at", columnList = "created_at")
         }
 )
 public class Message {
@@ -42,9 +43,10 @@ public class Message {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "message_status")
+    @Builder.Default
     private MessageStatus messageStatus = MessageStatus.ACTIVE;
 
-    @Column(name = "content", columnDefinition = "TEXT")
+    @Column(name = "content", columnDefinition = "TEXT", nullable = true)
     private String content;
 
     @Column(name = "created_at", nullable = false)

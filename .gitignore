@@ -41,3 +41,5 @@ out/
 data.sql
 dump.rdb
 trib-firebase-key.json
+
+websocket-test.html

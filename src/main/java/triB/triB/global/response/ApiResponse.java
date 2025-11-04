@@ -36,6 +36,17 @@ public class ApiResponse<T> {
         return new ResponseEntity<>(body, httpStatus);
     }
 
+    // Websocket용 성공 응답
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .status(200)
+                .message(message)
+                .code("OK")
+                .data(data)
+                .timestamp(OffsetDateTime.now())
+                .build();
+    }
     // ===================== 성공 응답 ==========================
 
     // 성공 200 OK
@@ -54,5 +65,17 @@ public class ApiResponse<T> {
                                                          String code,
                                                          String message) {
         return wrap(status, code, message, null);
+    }
+
+    // Websocket용 실패 응답
+    public static <T> ApiResponse<T> error(HttpStatus httpStatus, String message, String code) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .status(httpStatus.value())
+                .message(message)
+                .code(code)
+                .data(null)
+                .timestamp(OffsetDateTime.now())
+                .build();
     }
 }

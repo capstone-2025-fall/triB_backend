@@ -1,8 +1,8 @@
 package triB.triB.chat.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.checkerframework.checker.units.qual.C;
 import org.hibernate.annotations.CreationTimestamp;
 import triB.triB.room.entity.Room;
 
@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(
         name = "message_places",
         indexes = {
@@ -32,7 +35,8 @@ public class MessagePlace {
     @ManyToOne
     private Room room;
 
-    @Column(name = "place_tag", nullable = true)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "place_tag", nullable = false)
     private PlaceTag placeTag;
 
     @Column(name = "created_at", nullable = false)

@@ -26,7 +26,7 @@ public class MessageBookmark {
     @Column(name = "bookmark_id")
     private Long bookmarkId;
 
-    @JoinColumn(name = "message_id", nullable = false, unique = true)
+    @JoinColumn(name = "message_id", nullable = true, unique = true)
     @OneToOne
     private Message message;
 
