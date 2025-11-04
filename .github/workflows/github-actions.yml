@@ -134,7 +134,12 @@ jobs:
             
             # 로그인
             echo "$DOCKERHUB_PASSWORD" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            printf "DOCKERHUB_NAMESPACE=%s\nIMAGE_TAG=%s\n" "$DOCKERHUB_NAMESPACE" "$IMAGE_TAG" > .compose.env
+            {
+              printf "DOCKERHUB_NAMESPACE=%s\n" "$DOCKERHUB_NAMESPACE"
+              printf "IMAGE_TAG=%s\n" "$IMAGE_TAG"
+              printf "REDIS_PASSWORD=%s\n" "$REDIS_PASSWORD"
+            } > .compose.env
+
             # 이미지 업데이트
             sudo docker compose --env-file .compose.env pull
             # 컨테이너 실행
