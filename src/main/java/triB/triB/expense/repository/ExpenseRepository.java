@@ -18,11 +18,13 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     Optional<Expense> findByExpenseIdAndTripId(Long expenseId, Long tripId);
     
     List<Expense> findByTripIdAndExpenseDate(Long tripId, LocalDate expenseDate);
-    
+
+    List<Expense> findByTripIdAndExpenseDateAndUserId(Long tripId, LocalDate expenseDate, Long userId);
+
     @Query("SELECT new triB.triB.expense.dto.ExpenseSummaryByCategory(e.category, SUM(e.amount)) " +
-           "FROM Expense e WHERE e.tripId = :tripId GROUP BY e.category")
-    List<ExpenseSummaryByCategory> findExpenseSummaryByCategory(@Param("tripId") Long tripId);
-    
-    @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.tripId = :tripId AND e.expenseDate = :date")
-    Optional<BigDecimal> findTotalAmountByTripIdAndDate(@Param("tripId") Long tripId, @Param("date") LocalDate date);
+           "FROM Expense e WHERE e.tripId = :tripId AND e.userId = :userId GROUP BY e.category")
+    List<ExpenseSummaryByCategory> findExpenseSummaryByCategoryAndUserId(@Param("tripId") Long tripId, @Param("userId") Long userId);
+
+    @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.tripId = :tripId AND e.expenseDate = :date AND e.userId = :userId")
+    Optional<BigDecimal> findTotalAmountByTripIdAndDateAndUserId(@Param("tripId") Long tripId, @Param("date") LocalDate date, @Param("userId") Long userId);
 }

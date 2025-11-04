@@ -35,6 +35,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
 .env
 .env.prod
 .env.local
@@ -43,3 +44,4 @@ dump.rdb
 trib-firebase-key.json
 
 websocket-test.html
+
