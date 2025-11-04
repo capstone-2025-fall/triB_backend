@@ -125,8 +125,8 @@ public class StompHandler implements ChannelInterceptor {
             // /pub/chat/{roomId}/send 또는 /pub/chat/{roomId} 형식에서 roomId 추출
             String pathAfterPrefix = destination.substring("/pub/chat/".length());
             String roomIdStr = pathAfterPrefix.contains("/")
-                ? pathAfterPrefix.substring(0, pathAfterPrefix.indexOf("/"))
-                : pathAfterPrefix;
+                    ? pathAfterPrefix.substring(0, pathAfterPrefix.indexOf("/"))
+                    : pathAfterPrefix;
             Long roomId = Long.parseLong(roomIdStr);
 
             log.info("SEND - userId={}, roomId={}", userId, roomId);
