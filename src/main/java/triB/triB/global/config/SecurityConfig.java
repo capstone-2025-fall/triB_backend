@@ -82,6 +82,7 @@ public class SecurityConfig {
                 "http://localhost:8081",
                 "http://localhost:8000"
         ));
+//        cfg.setAllowedOriginPatterns(List.of("*"));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
