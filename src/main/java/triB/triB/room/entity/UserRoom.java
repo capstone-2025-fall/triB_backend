@@ -34,6 +34,7 @@ public class UserRoom {
     @MapsId("roomId")
     private Room room;
 
+    @Builder.Default
     @Column(name = "room_status", nullable = false)
     private RoomStatus roomStatus = RoomStatus.ACTIVE;
 }
