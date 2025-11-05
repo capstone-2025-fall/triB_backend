@@ -3,14 +3,15 @@ package triB.triB.room.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
-import triB.triB.room.dto.ChatUserResponse;
-import triB.triB.room.dto.RoomRequest;
-import triB.triB.room.dto.RoomResponse;
-import triB.triB.room.dto.RoomsResponse;
+import triB.triB.friendship.dto.UserResponse;
+import triB.triB.friendship.repository.FriendRepository;
+import triB.triB.room.dto.*;
 import triB.triB.chat.entity.Message;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.RoomStatus;
@@ -21,6 +22,7 @@ import triB.triB.room.repository.RoomReadStateRepository;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -35,6 +37,7 @@ public class RoomService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final RoomReadStateRepository roomReadStateRepository;
+    private final FriendRepository friendRepository;
 
     @Transactional(readOnly = true)
     public List<RoomsResponse> getRoomList(Long userId){
@@ -101,6 +104,86 @@ public class RoomService {
         }
 
         return new RoomResponse(room.getRoomId());
+    }
+
+    @Transactional
+    public void deleteRoom(Long userId, Long roomId) {
+        UserRoom userRoom = userRoomRepository.findByUser_UserIdAndRoom_RoomId(userId, roomId);
+        if (userRoom == null) {
+            throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
+        }
+        userRoom.setRoomStatus(RoomStatus.EXIT);
+    }
+
+    @Transactional
+    public void editChatRoom(Long userId, RoomEditRequest roomRequest) {
+        Long roomId = roomRequest.getRoomId();
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId)){
+            throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
+        }
+
+        String country = roomRequest.getCountry();
+        String roomName = roomRequest.getRoomName();
+        LocalDate startDate = roomRequest.getStartDate();
+        LocalDate endDate = roomRequest.getEndDate();
+
+        if (country != null) {
+            room.setDestination(roomRequest.getCountry());
+        }
+        if (roomName != null) {
+            room.setRoomName(roomRequest.getRoomName());
+        }
+        if (startDate != null) {
+            room.setStartDate(startDate);
+        }
+        if (endDate != null) {
+            room.setEndDate(endDate);
+        }
+    }
+
+    @Transactional
+    public void inviteFriends(Long userId, Long roomId, List<Long> userIds) {
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId)){
+            throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
+        }
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        for (Long id : userIds) {
+            if (userRoomRepository.existsByUser_UserIdAndRoom_RoomId(id, roomId)){
+                throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
+            }
+
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+            UserRoom ur = UserRoom.builder()
+                    .user(user)
+                    .room(room)
+                    .build();
+            userRoomRepository.save(ur);
+        }
+    }
+
+    public List<UserResponse> getUsersInvitable(Long userId, Long roomId) {
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId)){
+            throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
+        }
+
+        return friendRepository.findAllFriendByUser(userId)
+                .stream()
+                .filter(user -> !userRoomRepository
+                        .existsByUser_UserIdAndRoom_RoomId(user.getUserId(), roomId))
+                .map(user -> UserResponse.builder()
+                        .userId(user.getUserId())
+                        .nickname(user.getNickname())
+                        .photoUrl(user.getPhotoUrl())
+                        .build())
+                .toList();
     }
 
     // todo batch 조회 형식으로 수정해서 조회 최적화하기

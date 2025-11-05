@@ -10,5 +10,4 @@ import lombok.Setter;
 public class ChatUserResponse {
     private String nickname;
     private String photoUrl;
-
 }

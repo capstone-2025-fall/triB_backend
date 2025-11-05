@@ -45,6 +45,7 @@ public class ChatService {
         if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
             throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
 
+        log.info("채팅 내용 조회 시작");
         List<MessageResponse> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId)
                 .stream()
                 .map(message -> {

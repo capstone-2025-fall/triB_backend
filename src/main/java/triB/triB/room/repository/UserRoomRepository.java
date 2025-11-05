@@ -30,4 +30,8 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
     List<User> findUsersByRoomId(@Param("roomId") Long roomId);
 
     boolean existsByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
+
+    UserRoom findByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
+
+    Long room(Room room);
 }

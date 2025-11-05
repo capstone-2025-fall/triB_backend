@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import triB.triB.friendship.dto.UserResponse;
 import triB.triB.room.dto.*;
 import triB.triB.room.service.RoomService;
 import triB.triB.global.response.ApiResponse;
@@ -63,7 +64,43 @@ public class RoomController {
         return ApiResponse.created("채팅방을 생성했습니다.", room);
     }
 
-    // todo 채팅방 나가기
+    @DeleteMapping("/{roomId}")
+    public ResponseEntity<ApiResponse<RoomResponse>> deleteRoom(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable(name = "roomId") Long roomId
+    ){
+        Long userId = userPrincipal.getUserId();
+        roomService.deleteRoom(userId, roomId);
+        return ApiResponse.ok("채팅방을 나갔습니다.", null);
+    }
 
-    // todo 채팅방 수정하기
+    @PatchMapping
+    public ResponseEntity<ApiResponse<RoomResponse>> updateRoom(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody RoomEditRequest roomEditRequest
+    ){
+        Long userId = userPrincipal.getUserId();
+        roomService.editChatRoom(userId, roomEditRequest);
+        return ApiResponse.ok("채팅방을 수정했습니다.", null);
+    }
+
+    @PatchMapping("/friend")
+    public ResponseEntity<ApiResponse<RoomResponse>> addFriend(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody RoomEditRequest roomEditRequest
+    ){
+        Long userId = userPrincipal.getUserId();
+        roomService.inviteFriends(userId, roomEditRequest.getRoomId(), roomEditRequest.getUserIds());
+        return ApiResponse.ok("유저를 초대했습니다.", null);
+    }
+
+    @GetMapping("/friend/{roomId}")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getInvitableFriends(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable(name = "roomId")  Long roomId
+    ){
+        Long userId = userPrincipal.getUserId();
+        List<UserResponse> response = roomService.getUsersInvitable(userId, roomId);
+        return ApiResponse.ok("해당 채팅방에 초대할 수 있는 친구목록을 조회했습니다.", response);
+    }
 }
