@@ -122,7 +122,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,DOCKERHUB_NAMESPACE,IMAGE_TAG
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,DOCKERHUB_NAMESPACE,IMAGE_TAG,REDIS_PASSWORD
           port: 22 # ssh 포트 번호
           script: |
             set -e
@@ -132,6 +132,7 @@ jobs:
             [ -n "${DOCKERHUB_PASSWORD:-}" ] || { echo "DOCKERHUB_PASSWORD empty"; exit 1; }
             [ -n "${DOCKERHUB_NAMESPACE:-}" ] || { echo "DOCKERHUB_NAMESPACE empty"; exit 1; }
             [ -n "${IMAGE_TAG:-}" ] || { echo "IMAGE_TAG empty"; exit 1; }
+            [ -n "${REDIS_PASSWORD:-}" ] || { echo "REDIS_PASSWORD empty"; exit 1; }
             
             # 로그인
             echo "$DOCKERHUB_PASSWORD" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
