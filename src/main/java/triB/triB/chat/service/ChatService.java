@@ -24,6 +24,7 @@ import triB.triB.room.repository.UserRoomRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +49,7 @@ public class ChatService {
         log.info("채팅 내용 조회 시작");
         List<MessageResponse> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId)
                 .stream()
+                .filter(Objects::nonNull)
                 .map(message -> {
                     User user = message.getUser();
 
