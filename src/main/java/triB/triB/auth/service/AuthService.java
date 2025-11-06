@@ -23,6 +23,8 @@ import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.OauthAccountRepository;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.security.JwtProvider;
@@ -188,7 +190,7 @@ public class AuthService {
 
     public AccessTokenResponse refreshAccessToken(String refreshToken) {
         if (!jwtProvider.validateRefreshToken(refreshToken)){
-            throw new JwtException("토큰이 유효하지 않습니다.");
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
         Long userId = jwtProvider.extractUserIdFromRefreshToken(refreshToken);
         User user = userRepository.findById(userId)
