@@ -42,12 +42,6 @@ public class RoomController {
         return ApiResponse.ok("유저의 채팅방 목록을 조회했습니다.", rooms);
     }
 
-//    @GetMapping("/country")
-//    public ResponseEntity<ApiResponse<List<String>>> searchCountries(@RequestParam String country) {
-//        List<String> countries = roomService.getCountries(country);
-//        return ApiResponse.ok("나라를 검색했습니다.", countries);
-//    }
-
     @PostMapping("/users/summary")
     public ResponseEntity<ApiResponse<List<ChatUserResponse>>> getCreateUsers(@RequestBody UserRequest userRequest) {
         List<ChatUserResponse> users = roomService.selectFriends(userRequest.getUserIds());
