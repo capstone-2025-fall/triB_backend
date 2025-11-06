@@ -8,6 +8,7 @@ import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
+import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.*;
@@ -123,9 +124,9 @@ public class PostService {
         return PostDetailsResponse.from(post, author, trip, images, hashtags, isLikedByMe);
     }
 
-    public List<PostSummaryResponse> getTripSharePosts(PostSortType sortType) {
-        // 기본 정렬로 조회 (다음 PR에서 복잡한 필터링 추가)
-        List<Post> posts = postRepository.findByPostTypeOrderByCreatedAtDesc(PostType.TRIP_SHARE);
+    public List<PostSummaryResponse> getTripSharePosts(TripSharePostFilterRequest filter) {
+        // Custom repository를 통한 필터링 쿼리 실행
+        List<Post> posts = postRepository.findTripSharePostsWithFilters(filter);
 
         return posts.stream()
                 .map(this::mapToSummary)

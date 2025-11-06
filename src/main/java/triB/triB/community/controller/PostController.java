@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
+import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.service.PostService;
@@ -55,12 +56,24 @@ public class PostController {
     }
 
     @Operation(summary = "일정 공유 게시판 목록 조회",
-               description = "TRIP_SHARE 게시글 목록을 조회합니다. (기본 정렬: 최신순)")
+               description = "나라, 정렬 조건, 검색어를 동시에 적용하여 TRIP_SHARE 게시글 목록을 조회합니다.")
     @GetMapping("/trip-share")
     public ResponseEntity<ApiResponse<List<PostSummaryResponse>>> getTripSharePosts(
-            @RequestParam(defaultValue = "LATEST") PostSortType sortType) {
+            @RequestParam(required = false) String country,
+            @RequestParam(defaultValue = "LATEST") PostSortType sortType,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
 
-        List<PostSummaryResponse> response = postService.getTripSharePosts(sortType);
+        TripSharePostFilterRequest filter = TripSharePostFilterRequest.builder()
+                .country(country)
+                .sortType(sortType)
+                .keyword(keyword)
+                .page(page)
+                .size(size)
+                .build();
+
+        List<PostSummaryResponse> response = postService.getTripSharePosts(filter);
         return ApiResponse.ok("일정 공유 게시판 목록 조회 성공", response);
     }
 }
