@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.friendship.repository.FriendRepository;
@@ -52,11 +53,6 @@ public class RoomService {
         log.info("로그인한 유저가 검색하는 room 목록 조회");
         return roomList(userRooms, userId);
     }
-
-//    // todo google api 나라 검색 찾기
-//    public List<String> getCountries(String country) {
-//
-//    }
 
     public List<ChatUserResponse> selectFriends(List<Long> userIds) {
         List<ChatUserResponse> responses = new ArrayList<>();
@@ -154,18 +150,22 @@ public class RoomService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
 
         for (Long id : userIds) {
-            if (userRoomRepository.existsByUser_UserIdAndRoom_RoomId(id, roomId)){
-                throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
+            UserRoom ur;
+            if ((ur = userRoomRepository.findByUser_UserIdAndRoom_RoomId(id, roomId)) != null){
+                if (!ur.getRoomStatus().equals(RoomStatus.EXIT))
+                    throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
+                else
+                    ur.setRoomStatus(RoomStatus.ACTIVE);
+            } else {
+                User user = userRepository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+                UserRoom ur2 = UserRoom.builder()
+                        .user(user)
+                        .room(room)
+                        .build();
+                userRoomRepository.save(ur2);
             }
-
-            User user = userRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
-
-            UserRoom ur = UserRoom.builder()
-                    .user(user)
-                    .room(room)
-                    .build();
-            userRoomRepository.save(ur);
         }
     }
 
