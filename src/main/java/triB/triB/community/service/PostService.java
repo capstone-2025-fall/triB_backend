@@ -19,6 +19,8 @@ import triB.triB.schedule.repository.TripRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,9 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final PostImageRepository postImageRepository;
+    private final PostHashtagRepository postHashtagRepository;
+    private final HashtagRepository hashtagRepository;
+    private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
     private final TripRepository tripRepository;
     private final UserRoomRepository userRoomRepository;
@@ -82,6 +87,38 @@ public class PostService {
 
         // 7. Response 생성
         return PostDetailsResponse.from(savedPost, user, trip, postImages, hashtags, false);
+    }
+
+    public PostDetailsResponse getPostDetails(Long postId, Long currentUserId) {
+        // 1. Post 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        // 2. 작성자 조회
+        User author = userRepository.findById(post.getUserId())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 3. Trip 조회 (TRIP_SHARE인 경우만)
+        Trip trip = null;
+        if (post.getPostType() == PostType.TRIP_SHARE && post.getTripId() != null) {
+            trip = tripRepository.findById(post.getTripId()).orElse(null);
+        }
+
+        // 4. 이미지 조회
+        List<PostImage> images = postImageRepository.findByPostIdOrderByDisplayOrderAsc(postId);
+
+        // 5. 해시태그 조회
+        List<PostHashtag> postHashtags = postHashtagRepository.findByIdPostId(postId);
+        List<Hashtag> hashtags = postHashtags.stream()
+                .map(ph -> hashtagRepository.findById(ph.getId().getHashtagId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // 6. 현재 사용자의 좋아요 여부 확인
+        boolean isLikedByMe = currentUserId != null &&
+                postLikeRepository.existsByIdPostIdAndIdUserId(postId, currentUserId);
+
+        return PostDetailsResponse.from(post, author, trip, images, hashtags, isLikedByMe);
     }
 
     private void validateUserInTrip(Long userId, Trip trip) {
