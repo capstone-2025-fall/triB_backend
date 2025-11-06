@@ -6,8 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
+import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.*;
 import triB.triB.community.repository.*;
 import triB.triB.global.exception.CustomException;
@@ -119,6 +121,37 @@ public class PostService {
                 postLikeRepository.existsByIdPostIdAndIdUserId(postId, currentUserId);
 
         return PostDetailsResponse.from(post, author, trip, images, hashtags, isLikedByMe);
+    }
+
+    public List<PostSummaryResponse> getTripSharePosts(PostSortType sortType) {
+        // 기본 정렬로 조회 (다음 PR에서 복잡한 필터링 추가)
+        List<Post> posts = postRepository.findByPostTypeOrderByCreatedAtDesc(PostType.TRIP_SHARE);
+
+        return posts.stream()
+                .map(this::mapToSummary)
+                .collect(Collectors.toList());
+    }
+
+    private PostSummaryResponse mapToSummary(Post post) {
+        User author = userRepository.findById(post.getUserId()).orElse(null);
+        Trip trip = post.getTripId() != null ?
+                tripRepository.findById(post.getTripId()).orElse(null) : null;
+
+        // 첫 번째 이미지 URL 조회
+        String coverImageUrl = postImageRepository.findByPostIdOrderByDisplayOrderAsc(post.getPostId())
+                .stream()
+                .findFirst()
+                .map(PostImage::getImageUrl)
+                .orElse(null);
+
+        // 해시태그 조회
+        List<Hashtag> hashtags = postHashtagRepository.findByIdPostId(post.getPostId())
+                .stream()
+                .map(ph -> hashtagRepository.findById(ph.getId().getHashtagId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        return PostSummaryResponse.from(post, author, trip, coverImageUrl, hashtags);
     }
 
     private void validateUserInTrip(Long userId, Trip trip) {
