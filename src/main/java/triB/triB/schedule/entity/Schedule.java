@@ -2,6 +2,8 @@ package triB.triB.schedule.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import triB.triB.chat.entity.PlaceTag;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -37,6 +39,12 @@ public class Schedule {
 
     @Column(name = "place_name", nullable = false)
     private String placeName;
+
+    @Column(name = "name_address", nullable = false)
+    private String nameAddress;
+
+    @Column(name = "place_tag", nullable = false)
+    private PlaceTag placeTag;
 
     @Column(name = "latitude", nullable = false)
     private Double latitude;

@@ -1,10 +1,12 @@
 package triB.triB.chat.service;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.TokenRepository;
@@ -47,7 +49,7 @@ public class SocketService {
 
     // 메세지 전송
     @Transactional
-    public MessageResponse sendMessageToRoom(Long userId, Long roomId, String content){
+    public MessageResponse sendMessageToRoom(Long userId, Long roomId, String content) throws FirebaseMessagingException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
@@ -64,6 +66,7 @@ public class SocketService {
         messageRepository.save(message);
 
         sendMessagePushNotification(roomId, message);
+        // todo 확인해야할점: 지금 이 채팅방을 구독하고 있는 사람들에게는 메세지를 보낼필요가없음. 이 방안에 들어있지만 안 구독하고있는 사람에게 알림을 보내야됨
 
         return MessageResponse.builder()
                 .actionType(ActionType.NEW_MESSAGE)
@@ -85,7 +88,7 @@ public class SocketService {
 
     // 장소 공유
     @Transactional
-    public MessageResponse sendMapMessageToRoom(Long userId, Long roomId, String placeId, String displayName, Double latitude, Double longitude, String photoUrl){
+    public MessageResponse sendMapMessageToRoom(Long userId, Long roomId, String placeId, String displayName, Double latitude, Double longitude, String photoUrl) throws FirebaseMessagingException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
@@ -111,6 +114,9 @@ public class SocketService {
                 .build();
         messagePlaceDetailRepository.save(messagePlaceDetail);
 
+        message.setContent(messagePlaceDetail.getDisplayName());
+        messageRepository.save(message);
+
         sendMessagePushNotification(roomId, message);
 
         return MessageResponse.builder()
@@ -119,7 +125,7 @@ public class SocketService {
                 .message(
                         MessageDto.builder()
                                 .messageId(message.getMessageId())
-                                .content(null)
+                                .content(message.getContent())
                                 .messageType(message.getMessageType())
                                 .messageStatus(MessageStatus.ACTIVE)
                                 .tag(null)
@@ -277,27 +283,39 @@ public class SocketService {
                 .createdAt(null)
                 .build();
     }
-//
-//    private boolean isUserConnected(Long userId) {
+//   //todo 채팅방 구독상태인가
+//    private boolean isUserConnected(Room room, Long userId) {
 //
 //    }
-
-    private void sendMessagePushNotification(Long roomId, Message message){
-        List<User> users = userRoomRepository.findUsersByRoomId(roomId);
+//
+    private void sendMessagePushNotification(Long roomId, Message message) throws FirebaseMessagingException {
+        List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(roomId, IsAlarm.ON);
         log.info("message push notification send");
 
+//        Room room = roomRepository.findById(roomId)
+//                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
+//
 //        List<Token> tokens = users.stream()
-//                .filter(user -> !isUserConnected(user.getUserId()))
+//                .filter(user -> !isUserConnected(room, user.getUserId()))
 //                .map(Token::getUser)
 //                .filter(token -> token != null)
-//                .
-//        for (Token t : token) {
+//                .;
+//
+//        User user = message.getUser();
+//        String roomName = room.getRoomName();
+//        String content = user.getNickname() + "\n" +
+//                (message.getMessageType().equals(MessageType.TEXT) ?
+//                message.getContent()
+//                : messagePlaceDetailRepository.findByMessage_MessageId(message.getMessageId()).getDisplayName());
+//        String image = user.getPhotoUrl();
+//
+//        for (Token t : tokens) {
 //            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                    .requestType(RequestType.FRIEND_REQUEST)
+//                    .requestType(RequestType.MESSAGE)
 //                    .id(0L)
-//                    .title("TriB")
-//                    .content(requester.getNickname()+" 님이 나에게 친구를 신청했어요!")
-//                    .image(tribImage)
+//                    .title(roomName)
+//                    .content(content)
+//                    .image(image)
 //                    .token(t.getToken())
 //                    .build();
 //

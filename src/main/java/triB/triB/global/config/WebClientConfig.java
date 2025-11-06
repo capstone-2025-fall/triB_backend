@@ -25,4 +25,13 @@ public class WebClientConfig {
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + kakaoAdminKey)
                 .build();
     }
+
+    @Bean
+    public WebClient aiModelWebClient(@Value("${ai-server-url}") String aiServerUrl) {
+        return WebClient.builder()
+                .baseUrl(aiServerUrl)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+
+    }
 }

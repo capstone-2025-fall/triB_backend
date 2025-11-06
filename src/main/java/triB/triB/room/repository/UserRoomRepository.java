@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.User;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.UserRoom;
@@ -27,11 +28,17 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
     List<UserRoom> findAllWithUsersByRoomIds(@Param("roomIds") List<Long> roomIds);
 
     @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId order by ur.user.nickname asc")
-    List<User> findUsersByRoomId(@Param("roomId") Long roomId);
+    List<User> findUsersByRoomId(@Param("roomId") Long roomId, @Param("isAlarm") IsAlarm isAlarm);
+
+    @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId and ur.user.isAlarm = :isAlarm")
+    List<User> findUsersByRoomIdAndIsAlarm(@Param("roomId") Long roomId, @Param("isAlarm") IsAlarm isAlarm);
 
     boolean existsByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
 
     UserRoom findByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
 
-    Long room(Room room);
+//    Long room(Room room);
+
+    @Query("select count(ur.user) from UserRoom ur where ur.room.roomId = :roomId")
+    Integer countByRoom_RoomId(@Param("userId") Long roomId);
 }
