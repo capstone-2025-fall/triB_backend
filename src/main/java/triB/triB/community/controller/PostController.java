@@ -15,11 +15,13 @@ import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
+import triB.triB.community.dto.response.HotPostResponse;
 import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.Hashtag;
 import triB.triB.community.entity.TagType;
 import triB.triB.community.repository.HashtagRepository;
+import triB.triB.community.service.HotPostScheduler;
 import triB.triB.community.service.PostService;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
@@ -36,6 +38,7 @@ public class PostController {
 
     private final PostService postService;
     private final HashtagRepository hashtagRepository;
+    private final HotPostScheduler hotPostScheduler;
 
     @Operation(summary = "일정 공유 게시글 작성",
                description = "TRIP_SHARE 타입 게시글을 작성합니다. 여행 정보와 이미지를 함께 업로드할 수 있습니다.")
@@ -120,6 +123,19 @@ public class PostController {
 
         List<PostSummaryResponse> response = postService.getFreeBoardPosts(filter);
         return ApiResponse.ok("자유게시판 목록 조회 성공", response);
+    }
+
+    @Operation(summary = "핫 게시글 조회",
+               description = "최근 1시간 내 좋아요+댓글 수가 가장 많은 자유게시판 게시글 1개를 조회합니다. 1시간마다 자동 갱신됩니다.")
+    @GetMapping("/free-board/hot")
+    public ResponseEntity<ApiResponse<HotPostResponse>> getHotPost() {
+        HotPostResponse hotPost = hotPostScheduler.getHotPost();
+
+        if (hotPost == null) {
+            return ApiResponse.ok("현재 핫 게시글이 없습니다.", null);
+        }
+
+        return ApiResponse.ok("핫 게시글 조회 성공", hotPost);
     }
 
     @Operation(summary = "Predefined 해시태그 목록 조회",
