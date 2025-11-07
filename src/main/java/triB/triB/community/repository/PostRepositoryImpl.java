@@ -5,6 +5,7 @@ import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import triB.triB.community.dto.PostSortType;
+import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.entity.Post;
 import triB.triB.community.entity.PostType;
@@ -71,6 +72,61 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         }
 
         // 페이징
+        query.setFirstResult(filter.getPage() * filter.getSize());
+        query.setMaxResults(filter.getSize());
+
+        return query.getResultList();
+    }
+
+    @Override
+    public List<Post> findFreeBoardPostsWithFilters(FreeBoardPostFilterRequest filter) {
+        StringBuilder jpql = new StringBuilder();
+        jpql.append("SELECT DISTINCT p FROM Post p ");
+        jpql.append("LEFT JOIN p.hashtags ph ");
+        jpql.append("LEFT JOIN ph.hashtag h ");
+        jpql.append("WHERE p.postType = :postType ");
+
+        // 제목 검색
+        if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+            jpql.append("AND p.title LIKE :keyword ");
+        }
+
+        // 해시태그 필터
+        if (filter.getHashtags() != null && !filter.getHashtags().isEmpty()) {
+            jpql.append("AND h.tagName IN :hashtags ");
+        }
+
+        // 정렬
+        PostSortType sortType = filter.getSortType();
+        jpql.append("ORDER BY ");
+        switch (sortType) {
+            case LATEST:
+                jpql.append("p.createdAt DESC");
+                break;
+            case OLDEST:
+                jpql.append("p.createdAt ASC");
+                break;
+            case MOST_LIKED:
+                jpql.append("p.likesCount DESC, p.postId DESC");
+                break;
+            case MOST_COMMENTED:
+                jpql.append("p.commentsCount DESC, p.postId DESC");
+                break;
+            default:
+                jpql.append("p.createdAt DESC");
+        }
+
+        TypedQuery<Post> query = entityManager.createQuery(jpql.toString(), Post.class);
+        query.setParameter("postType", PostType.FREE_BOARD);
+
+        if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+            query.setParameter("keyword", "%" + filter.getKeyword() + "%");
+        }
+
+        if (filter.getHashtags() != null && !filter.getHashtags().isEmpty()) {
+            query.setParameter("hashtags", filter.getHashtags());
+        }
+
         query.setFirstResult(filter.getPage() * filter.getSize());
         query.setMaxResults(filter.getSize());
 
