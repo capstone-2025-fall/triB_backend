@@ -11,6 +11,7 @@ import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
+import triB.triB.community.dto.response.HotPostResponse;
 import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.*;
@@ -22,6 +23,7 @@ import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.schedule.entity.Trip;
 import triB.triB.schedule.repository.TripRepository;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -195,6 +197,19 @@ public class PostService {
 
         return posts.stream()
                 .map(this::mapToSummary)
+                .collect(Collectors.toList());
+    }
+
+    public List<HotPostResponse> getHotPosts(int limit) {
+        // 최근 7일 내 작성된 게시글 중 좋아요 + 댓글 수 상위 N개
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+
+        List<Post> posts = postRepository.findByPostTypeAndCreatedAtAfterOrderByLikesCountDescCommentsCountDesc(
+                PostType.FREE_BOARD, weekAgo);
+
+        return posts.stream()
+                .limit(limit)
+                .map(HotPostResponse::from)
                 .collect(Collectors.toList());
     }
 
