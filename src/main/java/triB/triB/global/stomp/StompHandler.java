@@ -83,14 +83,13 @@ public class StompHandler implements ChannelInterceptor {
                         throw new BadCredentialsException("인증 토큰이 필요합니다.");
                     }
 
-
                     String token = jwtToken.substring(7);
                     if (!jwtProvider.validateAccessToken(token)) {
                         throw new JwtException("유효하지 않는 토큰입니다.");
                     }
                     Long userId = jwtProvider.extractUserId(token);
 
-                    log.info("SUBSCRIBE - userId={}, roomId={}", userId, roomId);
+                    log.info("SUBSCRIBE - subscriptionId= {}, userId={}, roomId={}", accessor.getSubscriptionId(), userId, roomId);
 
                     boolean hasAccess = userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId);
 
@@ -150,6 +149,7 @@ public class StompHandler implements ChannelInterceptor {
                 log.info("구독 해제 요청 시작");
                 String subscriptionId = accessor.getSubscriptionId();
                 Long roomId = (Long) accessor.getSessionAttributes().get("subscription:"+subscriptionId);
+                log.info("roomId={}", roomId);
 
                 if (roomId == null)
                     throw new IllegalArgumentException("구독 정보가 없습니다.");
@@ -202,7 +202,9 @@ public class StompHandler implements ChannelInterceptor {
             }
             return message;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("STOMP 메시지 처리 중 에러 발생: {}", e.getMessage(), e);
+            return null;  // 메시지 처리 중단
+
         }
     }
 
