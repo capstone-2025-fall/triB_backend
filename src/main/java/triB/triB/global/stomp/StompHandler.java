@@ -23,6 +23,7 @@ import triB.triB.global.security.JwtProvider;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.RoomReadState;
+import triB.triB.room.entity.RoomReadStateId;
 import triB.triB.room.repository.RoomReadStateRepository;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
@@ -183,7 +184,9 @@ public class StompHandler implements ChannelInterceptor {
                 log.info("마지막으로 읽은 메세지 저장");
                 // 만약에 이미 읽은 기록이 있다면 업데이트 없다면 생성
                 if (r == null) {
+                    RoomReadStateId id = new RoomReadStateId(userId, roomId);
                     RoomReadState roomReadState = RoomReadState.builder()
+                            .id(id)
                             .user(user)
                             .room(room)
                             .lastReadMessageId(messageId)
