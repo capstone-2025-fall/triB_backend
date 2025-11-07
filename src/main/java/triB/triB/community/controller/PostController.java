@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import triB.triB.community.dto.HashtagResponse;
 import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
+import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
@@ -97,6 +98,28 @@ public class PostController {
 
         List<PostSummaryResponse> response = postService.getTripSharePosts(filter);
         return ApiResponse.ok("일정 공유 게시판 목록 조회 성공", response);
+    }
+
+    @Operation(summary = "자유게시판 목록 조회",
+               description = "제목 검색, 정렬 조건, 해시태그 필터를 동시에 적용하여 FREE_BOARD 게시글 목록을 조회합니다.")
+    @GetMapping("/free-board")
+    public ResponseEntity<ApiResponse<List<PostSummaryResponse>>> getFreeBoardPosts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "LATEST") PostSortType sortType,
+            @RequestParam(required = false) List<String> hashtags,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        FreeBoardPostFilterRequest filter = FreeBoardPostFilterRequest.builder()
+                .keyword(keyword)
+                .sortType(sortType)
+                .hashtags(hashtags)
+                .page(page)
+                .size(size)
+                .build();
+
+        List<PostSummaryResponse> response = postService.getFreeBoardPosts(filter);
+        return ApiResponse.ok("자유게시판 목록 조회 성공", response);
     }
 
     @Operation(summary = "Predefined 해시태그 목록 조회",
