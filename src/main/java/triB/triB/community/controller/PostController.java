@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.community.dto.PostSortType;
+import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
@@ -40,6 +41,20 @@ public class PostController {
         PostDetailsResponse response = postService.createTripSharePost(userId, request, images);
 
         return ApiResponse.created("일정 공유 게시글이 작성되었습니다.", response);
+    }
+
+    @Operation(summary = "자유게시판 게시글 작성",
+               description = "FREE_BOARD 타입 게시글을 작성합니다. Predefined 해시태그를 선택할 수 있습니다.")
+    @PostMapping(value = "/free-board", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<PostDetailsResponse>> createFreeBoardPost(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Valid @RequestPart("request") FreeBoardPostCreateRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+
+        Long userId = userPrincipal.getUserId();
+        PostDetailsResponse response = postService.createFreeBoardPost(userId, request, images);
+
+        return ApiResponse.created("자유게시판 게시글이 작성되었습니다.", response);
     }
 
     @Operation(summary = "게시글 상세 조회",
