@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.community.dto.PostSortType;
+import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
@@ -90,6 +91,60 @@ public class PostService {
 
         // 7. Response 생성
         return PostDetailsResponse.from(savedPost, user, trip, postImages, hashtags, false);
+    }
+
+    @Transactional
+    public PostDetailsResponse createFreeBoardPost(Long userId,
+                                                   FreeBoardPostCreateRequest request,
+                                                   List<MultipartFile> images) {
+        // 1. 사용자 검증
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 2. Post 엔티티 생성
+        Post post = Post.builder()
+                .userId(userId)
+                .user(user)
+                .postType(PostType.FREE_BOARD)
+                .tripId(null)  // 자유게시판은 tripId 없음
+                .trip(null)
+                .title(request.getTitle())
+                .content(request.getContent())
+                .likesCount(0)
+                .commentsCount(0)
+                .build();
+
+        Post savedPost = postRepository.save(post);
+
+        // 3. 이미지 업로드 및 저장
+        List<PostImage> postImages = new ArrayList<>();
+        if (images != null && !images.isEmpty()) {
+            for (int i = 0; i < images.size(); i++) {
+                String imageUrl = awsS3Client.uploadFile(images.get(i));
+                PostImage postImage = PostImage.builder()
+                        .postId(savedPost.getPostId())
+                        .post(savedPost)
+                        .imageUrl(imageUrl)
+                        .displayOrder(i)
+                        .build();
+                postImages.add(postImageRepository.save(postImage));
+            }
+        }
+
+        // 4. Predefined 해시태그 연결
+        List<Hashtag> hashtags = hashtagRepository.findByTagNameIn(request.getHashtags());
+        for (Hashtag hashtag : hashtags) {
+            PostHashtagId postHashtagId = new PostHashtagId(savedPost.getPostId(), hashtag.getHashtagId());
+            PostHashtag postHashtag = PostHashtag.builder()
+                    .id(postHashtagId)
+                    .post(savedPost)
+                    .hashtag(hashtag)
+                    .build();
+            postHashtagRepository.save(postHashtag);
+        }
+
+        // 5. Response 생성
+        return PostDetailsResponse.from(savedPost, user, null, postImages, hashtags, false);
     }
 
     public PostDetailsResponse getPostDetails(Long postId, Long currentUserId) {
