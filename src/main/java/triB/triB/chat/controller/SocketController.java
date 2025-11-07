@@ -1,5 +1,6 @@
 package triB.triB.chat.controller;
 
+import com.google.firebase.messaging.FirebaseMessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -27,8 +28,7 @@ public class SocketController {
     public ApiResponse<MessageResponse> sendMessage(
             @Header("Authorization") String authHeader,
             @DestinationVariable Long roomId,
-            @Payload MessageContentRequest messageContentRequest)
-    {
+            @Payload MessageContentRequest messageContentRequest) throws FirebaseMessagingException {
         String token = authHeader.substring(7); // "Bearer " 제거
         Long userId = jwtProvider.extractUserId(token);
         MessageResponse result = socketService.sendMessageToRoom(userId, roomId, messageContentRequest.getContent());
@@ -42,8 +42,7 @@ public class SocketController {
             @Header("Authorization") String authHeader,
             @DestinationVariable Long roomId,
             @Payload PlaceRequest placeRequest
-    )
-    {
+    ) throws FirebaseMessagingException {
         String token = authHeader.substring(7); // "Bearer " 제거
         Long userId = jwtProvider.extractUserId(token);
         MessageResponse result = socketService.sendMapMessageToRoom(userId, roomId, placeRequest.getPlaceId(), placeRequest.getDisplayName(), placeRequest.getLatitude(), placeRequest.getLongitude(), placeRequest.getPhotoUrl());

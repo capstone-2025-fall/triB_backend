@@ -137,7 +137,7 @@ public class FriendshipService {
 
         friendshipRepository.save(friendship);
 
-//        // todo FCM 메세지 알림 보내기 userId2에게
+//        // todo FCM 메세지 알림 보내기 userId2에게 알람이 ON인 유저만
 //        List<Token> token = tokenRepository.findAllByUser_UserId(userId2);
 //
 //        if (token.isEmpty()) {
@@ -196,7 +196,7 @@ public class FriendshipService {
         friendRepository.save(friend1);
         friendRepository.save(friend2);
 
-//        // todo FCM 메세지 알림 보내기 friendship.getRequester
+//        // todo FCM 메세지 알림 보내기 friendship.getRequester 그리고 isAlarm == ON인 유저만
 //        List<Token> token = tokenRepository.findAllByUser_UserId(friendship.getRequester().getUserId());
 //
 //        if (token.isEmpty()) {
