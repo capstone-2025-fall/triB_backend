@@ -97,7 +97,8 @@ public class JwtProvider {
 
     public String generateAccessToken(Long userId) {
         Date now = new Date();
-        Date expires = new Date(now.getTime() + accessExpiresIn);
+//        Date expires = new Date(now.getTime() + accessExpiresIn);
+        Date expires = new Date(now.getTime() + 60000);
         return Jwts.builder()
                 .subject(userId.toString())
                 .expiration(expires)
