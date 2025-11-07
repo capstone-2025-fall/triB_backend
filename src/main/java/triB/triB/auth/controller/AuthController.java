@@ -94,6 +94,7 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        log.info("refreshToken 재발급 요청이 들어왔습니다.");
         AccessTokenResponse response = authService.refreshAccessToken(refreshTokenRequest.getRefreshToken());
         return ApiResponse.ok("accessToken을 재발급 받았습니다.", response);
     }
