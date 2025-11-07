@@ -17,11 +17,13 @@ import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.HotPostResponse;
 import triB.triB.community.dto.response.PostDetailsResponse;
+import triB.triB.community.dto.response.PostLikeResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.Hashtag;
 import triB.triB.community.entity.TagType;
 import triB.triB.community.repository.HashtagRepository;
 import triB.triB.community.service.HotPostScheduler;
+import triB.triB.community.service.PostLikeService;
 import triB.triB.community.service.PostService;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
@@ -37,6 +39,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final PostLikeService postLikeService;
     private final HashtagRepository hashtagRepository;
     private final HotPostScheduler hotPostScheduler;
 
@@ -148,5 +151,25 @@ public class PostController {
                 .collect(Collectors.toList());
 
         return ApiResponse.ok("Predefined 해시태그 목록 조회 성공", response);
+    }
+
+    @Operation(summary = "게시글 좋아요 토글",
+               description = "게시글 좋아요를 추가하거나 취소합니다. 이미 좋아요를 누른 경우 취소되고, 안 누른 경우 추가됩니다.")
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<ApiResponse<PostLikeResponse>> togglePostLike(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        Long userId = userPrincipal.getUserId();
+        postLikeService.toggleLike(postId, userId);
+
+        // 토글 후 현재 상태 조회
+        boolean isLiked = postLikeService.isLikedByUser(postId, userId);
+        PostDetailsResponse postDetails = postService.getPostDetails(postId, userId);
+
+        PostLikeResponse response = PostLikeResponse.of(isLiked, postDetails.getLikesCount());
+
+        String message = isLiked ? "게시글에 좋아요를 추가했습니다." : "게시글 좋아요를 취소했습니다.";
+        return ApiResponse.ok(message, response);
     }
 }
