@@ -189,6 +189,7 @@ public class AuthService {
     }
 
     public AccessTokenResponse refreshAccessToken(String refreshToken) {
+        log.info("redisToken validate한지 검증");
         if (!jwtProvider.validateRefreshToken(refreshToken)){
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
