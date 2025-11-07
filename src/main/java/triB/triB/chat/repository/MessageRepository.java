@@ -13,7 +13,7 @@ import java.util.List;
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
     // 메세지 읽은 기록이 없는 room
-    @Query("select m from Message m where m.room.roomId in :roomIds and m.messageId = (select max(m2.messageId) from Message m2 where m2.room.roomId in :roomIds group by m2.room.roomId)")
+    @Query("select m from Message m where m.room.roomId in :roomIds and m.messageId = (select max(m2.messageId) from Message m2 where m2.room.roomId = m.room.roomId)")
     List<Message> findLastMessagesByRooms(@Param("roomIds") List<Long> roomIds);
 
     // 메세지 읽은 기록이 있는 room
