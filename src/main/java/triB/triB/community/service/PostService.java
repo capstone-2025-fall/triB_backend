@@ -8,6 +8,7 @@ import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
+import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
 import triB.triB.community.dto.request.TripSharePostFilterRequest;
 import triB.triB.community.dto.response.PostDetailsResponse;
@@ -182,6 +183,15 @@ public class PostService {
     public List<PostSummaryResponse> getTripSharePosts(TripSharePostFilterRequest filter) {
         // Custom repository를 통한 필터링 쿼리 실행
         List<Post> posts = postRepository.findTripSharePostsWithFilters(filter);
+
+        return posts.stream()
+                .map(this::mapToSummary)
+                .collect(Collectors.toList());
+    }
+
+    public List<PostSummaryResponse> getFreeBoardPosts(FreeBoardPostFilterRequest filter) {
+        // Custom repository를 통한 필터링 쿼리 실행
+        List<Post> posts = postRepository.findFreeBoardPostsWithFilters(filter);
 
         return posts.stream()
                 .map(this::mapToSummary)
