@@ -200,17 +200,14 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
-    public List<HotPostResponse> getHotPosts(int limit) {
-        // 최근 7일 내 작성된 게시글 중 좋아요 + 댓글 수 상위 N개
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+    public HotPostResponse calculateHotPost() {
+        // 최근 1시간 내 작성된 게시글 중 좋아요 + 댓글 수 최상위 1개
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
 
-        List<Post> posts = postRepository.findByPostTypeAndCreatedAtAfterOrderByLikesCountDescCommentsCountDesc(
-                PostType.FREE_BOARD, weekAgo);
+        Post hotPost = postRepository.findTopByPostTypeAndCreatedAtAfterOrderByLikesCountDescCommentsCountDesc(
+                PostType.FREE_BOARD, oneHourAgo);
 
-        return posts.stream()
-                .limit(limit)
-                .map(HotPostResponse::from)
-                .collect(Collectors.toList());
+        return hotPost != null ? HotPostResponse.from(hotPost) : null;
     }
 
     private PostSummaryResponse mapToSummary(Post post) {
