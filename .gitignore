@@ -39,7 +39,6 @@ out/
 .env
 .env.prod
 .env.local
-data.sql
 dump.rdb
 trib-firebase-key.json
 
