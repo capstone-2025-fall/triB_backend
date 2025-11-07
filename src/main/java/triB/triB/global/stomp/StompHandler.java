@@ -43,45 +43,73 @@ public class StompHandler implements ChannelInterceptor {
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+        try{
+            StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
-        // WebSocket 연결 요청
-        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            String jwtToken = accessor.getFirstNativeHeader("Authorization");
+            // WebSocket 연결 요청
+            if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+                String jwtToken = accessor.getFirstNativeHeader("Authorization");
 
-            if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
-                throw new IllegalArgumentException("인증 토큰이 필요합니다.");
+                if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
+                    throw new IllegalArgumentException("인증 토큰이 필요합니다.");
+                }
+
+                String token = jwtToken.substring(7);
+
+                if (!jwtProvider.validateAccessToken(token)) {
+                    throw new JwtException("유효하지 않는 토큰입니다.");
+                }
+
+                Long userId = jwtProvider.extractUserId(token);
+                log.info("WebSocket 연결 성공: userId= {}", userId);
             }
+            // todo 채팅룸 구독 요청
+            else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
 
-            String token = jwtToken.substring(7);
+                String destination = accessor.getDestination();
 
-            if (!jwtProvider.validateAccessToken(token)) {
-                throw new JwtException("유효하지 않는 토큰입니다.");
+                log.info("채팅룸 확인전");
+                if (destination == null || !destination.startsWith("/sub/chat/"))
+                    throw new IllegalArgumentException("잘못된 요청입니다.");
+
+                log.info("채팅룸 확인 중");
+
+                try {
+                    Long roomId = Long.parseLong(destination.substring("/sub/chat/".length()));
+                    log.info("roomID={}", roomId);
+
+                    String jwtToken = accessor.getFirstNativeHeader("Authorization");
+                    if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
+                        throw new BadCredentialsException("인증 토큰이 필요합니다.");
+                    }
+
+
+                    String token = jwtToken.substring(7);
+                    if (!jwtProvider.validateAccessToken(token)) {
+                        throw new JwtException("유효하지 않는 토큰입니다.");
+                    }
+                    Long userId = jwtProvider.extractUserId(token);
+
+                    log.info("SUBSCRIBE - userId={}, roomId={}", userId, roomId);
+
+                    boolean hasAccess = userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId);
+
+                    if (!hasAccess) {
+                        log.warn("채팅방 구독 권한 없음. userId={}, roomId={}", userId, roomId);
+                        throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
+                    }
+
+                    log.info("채팅방 구독 성공. userId={}, roomId={}", userId, roomId);
+                } catch (NumberFormatException e) {
+                    log.error("잘못된 roomId 형식: {}", destination);
+                    throw new IllegalArgumentException("잘못된 채팅방 ID 형식입니다.");
+                }
             }
-
-            Long userId = jwtProvider.extractUserId(token);
-            log.info("WebSocket 연결 성공: userId= {}", userId);
-        }
-        // todo 채팅룸 구독 요청
-        else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-
-            String destination = accessor.getDestination();
-
-            log.info("채팅룸 확인전");
-            if (destination == null || !destination.startsWith("/sub/chat/"))
-                throw new IllegalArgumentException("잘못된 요청입니다.");
-
-            log.info("채팅룸 확인 중");
-
-            try {
-                Long roomId = Long.parseLong(destination.substring("/sub/chat/".length()));
-                log.info("roomID={}", roomId);
-
+            else if (StompCommand.SEND.equals(accessor.getCommand())) {
                 String jwtToken = accessor.getFirstNativeHeader("Authorization");
                 if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
                     throw new BadCredentialsException("인증 토큰이 필요합니다.");
                 }
-
 
                 String token = jwtToken.substring(7);
                 if (!jwtProvider.validateAccessToken(token)) {
@@ -89,112 +117,88 @@ public class StompHandler implements ChannelInterceptor {
                 }
                 Long userId = jwtProvider.extractUserId(token);
 
-                log.info("SUBSCRIBE - userId={}, roomId={}", userId, roomId);
+                String destination = accessor.getDestination();
+
+                log.info("메시지 전송 요청 확인: destination={}", destination);
+                if (destination == null || !destination.startsWith("/pub/chat/"))
+                    throw new IllegalArgumentException("잘못된 요청입니다.");
+
+                // /pub/chat/{roomId}/send 또는 /pub/chat/{roomId} 형식에서 roomId 추출
+                String pathAfterPrefix = destination.substring("/pub/chat/".length());
+                String roomIdStr = pathAfterPrefix.contains("/")
+                        ? pathAfterPrefix.substring(0, pathAfterPrefix.indexOf("/"))
+                        : pathAfterPrefix;
+                Long roomId = Long.parseLong(roomIdStr);
+
+                log.info("SEND - userId={}, roomId={}", userId, roomId);
 
                 boolean hasAccess = userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId);
 
                 if (!hasAccess) {
-                    log.warn("채팅방 구독 권한 없음. userId={}, roomId={}", userId, roomId);
+                    log.warn("채팅방 전송 권한 없음. userId={}, roomId={}", userId, roomId);
                     throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
                 }
 
-                log.info("채팅방 구독 성공. userId={}, roomId={}", userId, roomId);
-            } catch (NumberFormatException e) {
-                log.error("잘못된 roomId 형식: {}", destination);
-                throw new IllegalArgumentException("잘못된 채팅방 ID 형식입니다.");
+                log.info("메시지 전송 권한 확인 완료. userId={}, roomId={}", userId, roomId);
             }
+            // 채팅룸 구독 해제
+            else if (StompCommand.UNSUBSCRIBE.equals(accessor.getCommand())) {
+
+                String subscriptionId = accessor.getSubscriptionId();
+                Long roomId = (Long) accessor.getSessionAttributes().get("subscription:"+subscriptionId);
+
+                if (roomId == null)
+                    throw new IllegalArgumentException("구독 정보가 없습니다.");
+
+                String jwtToken = accessor.getFirstNativeHeader("Authorization");
+                if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
+                    throw new BadCredentialsException("인증 토큰이 필요합니다.");
+                }
+
+                String token = jwtToken.substring(7);
+                if (!jwtProvider.validateAccessToken(token)) {
+                    throw new JwtException("유효하지 않는 토큰입니다.");
+                }
+                Long userId = jwtProvider.extractUserId(token);
+
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+                Room room = roomRepository.findById(roomId)
+                        .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+                Long messageId = messageRepository.findLastReadMessageIdByRoom_RoomId(roomId);
+
+                if (messageId == null) {
+                    accessor.getSessionAttributes().remove("subscription:" + subscriptionId);
+                    return message;
+                }
+
+                RoomReadState r = roomReadStateRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
+
+                // 만약에 이미 읽은 기록이 있다면 업데이트 없다면 생성
+                if (r == null) {
+                    RoomReadState roomReadState = RoomReadState.builder()
+                            .user(user)
+                            .room(room)
+                            .lastReadMessageId(messageId)
+                            .build();
+                    roomReadStateRepository.save(roomReadState);
+                } else {
+                    r.setLastReadMessageId(messageId);
+                    roomReadStateRepository.save(r);
+                }
+                accessor.getSessionAttributes().remove("subscription:"+subscriptionId);
+                log.info("채팅방 구독 해제: userId={}, roomId={}", userId, roomId);
+            }
+            // 앱 종료시 웹소켓 연결 종료
+            else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
+                SecurityContextHolder.clearContext();
+            }
+            return message;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        else if (StompCommand.SEND.equals(accessor.getCommand())) {
-            String jwtToken = accessor.getFirstNativeHeader("Authorization");
-            if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
-                throw new BadCredentialsException("인증 토큰이 필요합니다.");
-            }
-
-            String token = jwtToken.substring(7);
-            if (!jwtProvider.validateAccessToken(token)) {
-                throw new JwtException("유효하지 않는 토큰입니다.");
-            }
-            Long userId = jwtProvider.extractUserId(token);
-
-            String destination = accessor.getDestination();
-
-            log.info("메시지 전송 요청 확인: destination={}", destination);
-            if (destination == null || !destination.startsWith("/pub/chat/"))
-                throw new IllegalArgumentException("잘못된 요청입니다.");
-
-            // /pub/chat/{roomId}/send 또는 /pub/chat/{roomId} 형식에서 roomId 추출
-            String pathAfterPrefix = destination.substring("/pub/chat/".length());
-            String roomIdStr = pathAfterPrefix.contains("/")
-                    ? pathAfterPrefix.substring(0, pathAfterPrefix.indexOf("/"))
-                    : pathAfterPrefix;
-            Long roomId = Long.parseLong(roomIdStr);
-
-            log.info("SEND - userId={}, roomId={}", userId, roomId);
-
-            boolean hasAccess = userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId);
-
-            if (!hasAccess) {
-                log.warn("채팅방 전송 권한 없음. userId={}, roomId={}", userId, roomId);
-                throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
-            }
-
-            log.info("메시지 전송 권한 확인 완료. userId={}, roomId={}", userId, roomId);
-        }
-        // 채팅룸 구독 해제
-        else if (StompCommand.UNSUBSCRIBE.equals(accessor.getCommand())) {
-
-            String subscriptionId = accessor.getSubscriptionId();
-            Long roomId = (Long) accessor.getSessionAttributes().get("subscription:"+subscriptionId);
-
-            if (roomId == null)
-                throw new IllegalArgumentException("구독 정보가 없습니다.");
-
-            String jwtToken = accessor.getFirstNativeHeader("Authorization");
-            if (jwtToken == null || !jwtToken.startsWith("Bearer ")) {
-                throw new BadCredentialsException("인증 토큰이 필요합니다.");
-            }
-
-            String token = jwtToken.substring(7);
-            if (!jwtProvider.validateAccessToken(token)) {
-                throw new JwtException("유효하지 않는 토큰입니다.");
-            }
-            Long userId = jwtProvider.extractUserId(token);
-
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
-
-            Room room = roomRepository.findById(roomId)
-                    .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
-
-            Long messageId = messageRepository.findLastReadMessageIdByRoom_RoomId(roomId);
-
-            if (messageId == null) {
-                accessor.getSessionAttributes().remove("subscription:" + subscriptionId);
-                return message;
-            }
-
-            RoomReadState r = roomReadStateRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
-
-            // 만약에 이미 읽은 기록이 있다면 업데이트 없다면 생성
-            if (r == null) {
-                RoomReadState roomReadState = RoomReadState.builder()
-                        .user(user)
-                        .room(room)
-                        .lastReadMessageId(messageId)
-                        .build();
-                roomReadStateRepository.save(roomReadState);
-            } else {
-                r.setLastReadMessageId(messageId);
-                roomReadStateRepository.save(r);
-            }
-            accessor.getSessionAttributes().remove("subscription:"+subscriptionId);
-            log.info("채팅방 구독 해제: userId={}, roomId={}", userId, roomId);
-        }
-        // 앱 종료시 웹소켓 연결 종료
-        else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
-            SecurityContextHolder.clearContext();
-        }
-        return message;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package triB.triB.chat.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.Date;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -100,9 +102,12 @@ public class ChatService {
     // todo 일단은 조회 동기적으로 구현해서 올리고 추후 비동기로 수정하자(디비 조회가 동기적이여서 노란줄)
     // todo 일단 RestAPI로 생성하고 일정 생성 했음을 알리는 걸 WebSocket으로 뿌리자
     @Transactional
-    public Mono<Long> makeTrip(Long roomId){
+    public Mono<Long> makeTrip(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 룸이 존재하지 않습니다."));
+
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
+            throw new BadCredentialsException("해당 권한이 없습니다.");
 
         List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId);
 
@@ -131,19 +136,22 @@ public class ChatService {
             chat.add(message.getContent());
         }
 
+        ModelRequest modelRequest = ModelRequest.builder()
+                .days((Integer) (int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
+                .startDate(room.getStartDate().toString())
+                .country(room.getDestination())
+                .members(userRoomRepository.countByRoom_RoomId(roomId))
+                .places(places)
+                .mustVisit(mustVisit)
+                .rule(rule)
+                .chat(chat)
+                .build();
+
+        log.info("모델 통신 시작");
         return aiModelWebClient.post()
+                .uri("/api/v2/itinerary/generate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(ModelRequest.builder()
-                        .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
-                        .startDate(room.getStartDate())
-                        .country(room.getDestination())
-                        .members(userRoomRepository.countByRoom_RoomId(roomId))
-                        .places(places)
-                        .mustVisit(mustVisit)
-                        .rule(rule)
-                        .chat(chat)
-                        .build()
-                )
+                .bodyValue(modelRequest)
                 .retrieve()
                 .onStatus(
                         HttpStatusCode::is4xxClientError,
@@ -161,7 +169,6 @@ public class ChatService {
                             .destination(room.getDestination())
                             .tripStatus(TripStatus.READY)
                             .build();
-
                     tripRepository.save(t);
 
                     body.getItinerary().stream()
@@ -179,7 +186,6 @@ public class ChatService {
                                                     .date(date)
                                                     .visitOrder(visit.getOrder())
                                                     .placeName(visit.getDisplayName())
-                                                    .nameAddress(visit.getNameAddress())
                                                     .placeTag(visit.getPlaceTag())
                                                     .latitude(visit.getLatitude())
                                                     .longitude(visit.getLongitude())

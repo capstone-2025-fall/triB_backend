@@ -1,5 +1,6 @@
 package triB.triB.chat.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.List;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class ModelRequest {
     private Integer days;
-    private LocalDate startDate;
+    private String startDate;
     private String country;
     private Integer members;
     private List<ModelPlaceRequest> places;

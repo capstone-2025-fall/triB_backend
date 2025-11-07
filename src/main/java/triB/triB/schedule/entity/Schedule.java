@@ -40,9 +40,6 @@ public class Schedule {
     @Column(name = "place_name", nullable = false)
     private String placeName;
 
-    @Column(name = "name_address", nullable = false)
-    private String nameAddress;
-
     @Column(name = "place_tag", nullable = false)
     private PlaceTag placeTag;
 

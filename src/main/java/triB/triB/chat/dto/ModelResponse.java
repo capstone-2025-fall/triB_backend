@@ -34,7 +34,6 @@ public class ModelResponse {
     public static class Visit {
         private Integer order;
         private String displayName;
-        private String nameAddress;
         private PlaceTag placeTag;
         private Double latitude;
         private Double longitude;

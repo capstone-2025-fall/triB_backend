@@ -1,13 +1,12 @@
 package triB.triB.chat.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import triB.triB.chat.dto.RoomChatResponse;
+import triB.triB.chat.dto.TripResponse;
 import triB.triB.chat.service.ChatService;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
@@ -32,6 +31,15 @@ public class ChatController {
     }
 
     // 일정 생성하기
+    @PostMapping("/trip")
+    public ResponseEntity<ApiResponse<TripResponse>> createTrip(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(name = "roomId") Long roomId
+    ) {
+        Long userId = userPrincipal.getUserId();
+        TripResponse response = new TripResponse(chatService.makeTrip(userId, roomId).block());
+        return ApiResponse.created("일정을 생성했습니다.", response);
+    }
 
     // 생성된 일정 조회하기
 
