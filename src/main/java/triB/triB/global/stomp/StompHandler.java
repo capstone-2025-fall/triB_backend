@@ -99,6 +99,9 @@ public class StompHandler implements ChannelInterceptor {
                         throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
                     }
 
+                    // 구독 정보 저장 (UNSUBSCRIBE 시 사용)
+                    accessor.getSessionAttributes().put("subscription:" + accessor.getSubscriptionId(), roomId);
+
                     log.info("채팅방 구독 성공. userId={}, roomId={}", userId, roomId);
                 } catch (NumberFormatException e) {
                     log.error("잘못된 roomId 형식: {}", destination);
@@ -144,6 +147,7 @@ public class StompHandler implements ChannelInterceptor {
             // 채팅룸 구독 해제
             else if (StompCommand.UNSUBSCRIBE.equals(accessor.getCommand())) {
 
+                log.info("구독 해제 요청 시작");
                 String subscriptionId = accessor.getSubscriptionId();
                 Long roomId = (Long) accessor.getSessionAttributes().get("subscription:"+subscriptionId);
 
@@ -176,6 +180,7 @@ public class StompHandler implements ChannelInterceptor {
 
                 RoomReadState r = roomReadStateRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
 
+                log.info("마지막으로 읽은 메세지 저장");
                 // 만약에 이미 읽은 기록이 있다면 업데이트 없다면 생성
                 if (r == null) {
                     RoomReadState roomReadState = RoomReadState.builder()
