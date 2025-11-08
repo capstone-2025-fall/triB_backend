@@ -6,7 +6,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
-import triB.triB.community.dto.PostSortType;
 import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
 import triB.triB.community.dto.request.TripSharePostCreateRequest;
