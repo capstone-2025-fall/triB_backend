@@ -3,10 +3,14 @@ package triB.triB.community.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.community.dto.HashtagResponse;
@@ -36,6 +40,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/community/posts")
 @RequiredArgsConstructor
+@Validated
 public class PostController {
 
     private final PostService postService;
@@ -48,10 +53,12 @@ public class PostController {
     @PostMapping(value = "/trip-share", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PostDetailsResponse>> createTripSharePost(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Valid @RequestPart("request") TripSharePostCreateRequest request,
+            @RequestParam("tripId") Long tripId,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 
         Long userId = userPrincipal.getUserId();
+        TripSharePostCreateRequest request = new TripSharePostCreateRequest();
+        request.setTripId(tripId);
         PostDetailsResponse response = postService.createTripSharePost(userId, request, images);
 
         return ApiResponse.created("일정 공유 게시글이 작성되었습니다.", response);
@@ -62,8 +69,15 @@ public class PostController {
     @PostMapping(value = "/free-board", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PostDetailsResponse>> createFreeBoardPost(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Valid @RequestPart("request") FreeBoardPostCreateRequest request,
+            @RequestParam("title") @NotBlank(message = "제목은 필수입니다.") @Size(max = 100, message = "제목은 100자 이내로 입력해주세요.") String title,
+            @RequestParam("content") @NotBlank(message = "내용은 필수입니다.") @Size(max = 5000, message = "내용은 5000자 이내로 입력해주세요.") String content,
+            @RequestParam("hashtags") @NotEmpty(message = "최소 1개 이상의 해시태그를 선택해주세요.") @Size(max = 7, message = "해시태그는 최대 7개까지 선택 가능합니다.") List<String> hashtags,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+
+        FreeBoardPostCreateRequest request = new FreeBoardPostCreateRequest();
+        request.setTitle(title);
+        request.setContent(content);
+        request.setHashtags(hashtags);
 
         Long userId = userPrincipal.getUserId();
         PostDetailsResponse response = postService.createFreeBoardPost(userId, request, images);

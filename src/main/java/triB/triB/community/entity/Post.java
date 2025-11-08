@@ -44,10 +44,10 @@ public class Post {
     @Enumerated(EnumType.STRING)
     private PostType postType;
 
-    @Column(name = "trip_id", unique = true)
+    @Column(name = "trip_id")
     private Long tripId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id", insertable = false, updatable = false)
     private Trip trip;
 

@@ -149,6 +149,19 @@ public class PostService {
 
         // 4. Predefined 해시태그 연결
         List<Hashtag> hashtags = hashtagRepository.findByTagNameIn(request.getHashtags());
+
+        // 4-1. 모든 요청된 해시태그가 DB에 존재하는지 검증
+        if (hashtags.size() != request.getHashtags().size()) {
+            throw new CustomException(ErrorCode.INVALID_HASHTAG);
+        }
+
+        // 4-2. 모든 해시태그가 PREDEFINED 타입인지 검증
+        boolean allPredefined = hashtags.stream()
+                .allMatch(h -> h.getTagType() == TagType.PREDEFINED);
+        if (!allPredefined) {
+            throw new CustomException(ErrorCode.INVALID_HASHTAG);
+        }
+
         for (Hashtag hashtag : hashtags) {
             PostHashtagId postHashtagId = new PostHashtagId(savedPost.getPostId(), hashtag.getHashtagId());
             PostHashtag postHashtag = PostHashtag.builder()

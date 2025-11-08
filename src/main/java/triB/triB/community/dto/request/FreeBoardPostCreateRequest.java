@@ -5,10 +5,12 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class FreeBoardPostCreateRequest {
 
@@ -22,7 +24,7 @@ public class FreeBoardPostCreateRequest {
 
     @NotEmpty(message = "최소 1개 이상의 해시태그를 선택해주세요.")
     @Size(max = 7, message = "해시태그는 최대 7개까지 선택 가능합니다.")
-    private List<String> hashtags;  // Predefined 해시태그 이름 리스트
+    private List<String> hashtags;  // Predefined 해시태그(후기, 맛집, 꿀팁, 자연여행, 도시여행, 주의, 자유) 중에서만 선택 가능, 중복 선택 가능
 
     // 이미지는 MultipartFile로 별도 처리
 }
