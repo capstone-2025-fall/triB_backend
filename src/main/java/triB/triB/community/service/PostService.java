@@ -43,6 +43,7 @@ public class PostService {
     private final TripRepository tripRepository;
     private final UserRoomRepository userRoomRepository;
     private final AwsS3Client awsS3Client;
+    private final HashtagService hashtagService;
 
     @Transactional
     public PostDetailsResponse createTripSharePost(Long userId,
@@ -89,8 +90,17 @@ public class PostService {
             }
         }
 
-        // 6. 해시태그는 일단 빈 리스트 (PR #9에서 AI 생성 추가 예정)
-        List<Hashtag> hashtags = new ArrayList<>();
+        // 6. AI 해시태그 생성 및 연결
+        List<Hashtag> hashtags = hashtagService.generateHashtagsForTripShare(trip);
+        for (Hashtag hashtag : hashtags) {
+            PostHashtagId postHashtagId = new PostHashtagId(savedPost.getPostId(), hashtag.getHashtagId());
+            PostHashtag postHashtag = PostHashtag.builder()
+                    .id(postHashtagId)
+                    .post(savedPost)
+                    .hashtag(hashtag)
+                    .build();
+            postHashtagRepository.save(postHashtag);
+        }
 
         // 7. Response 생성
         return PostDetailsResponse.from(savedPost, user, trip, postImages, hashtags, false);
