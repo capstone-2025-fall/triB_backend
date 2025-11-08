@@ -1,0 +1,20 @@
+package triB.triB.community.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import triB.triB.community.entity.PostImage;
+
+import java.util.List;
+
+@Repository
+public interface PostImageRepository extends JpaRepository<PostImage, Long> {
+    /**
+     * 게시글의 모든 이미지 조회 (표시 순서대로 정렬)
+     */
+    List<PostImage> findByPostIdOrderByDisplayOrderAsc(Long postId);
+
+    /**
+     * 게시글의 모든 이미지 삭제
+     */
+    void deleteByPostId(Long postId);
+}
