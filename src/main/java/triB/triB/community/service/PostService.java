@@ -60,22 +60,25 @@ public class PostService {
         // 3. 사용자가 해당 여행의 참여자인지 검증
         validateUserInTrip(userId, trip);
 
-        // 4. Post 엔티티 생성
+        // 4. Trip의 Room에서 room_name 가져오기
+        String roomName = trip.getRoom().getRoomName();
+
+        // 5. Post 엔티티 생성 (제목은 room_name, content는 null)
         Post post = Post.builder()
                 .userId(userId)
                 .user(user)
                 .postType(PostType.TRIP_SHARE)
                 .tripId(request.getTripId())
                 .trip(trip)
-                .title(request.getTitle())
-                .content(request.getContent())
+                .title(roomName)
+                .content(null)
                 .likesCount(0)
                 .commentsCount(0)
                 .build();
 
         Post savedPost = postRepository.save(post);
 
-        // 5. 이미지 업로드 및 저장
+        // 6. 이미지 업로드 및 저장
         List<PostImage> postImages = new ArrayList<>();
         if (images != null && !images.isEmpty()) {
             for (int i = 0; i < images.size(); i++) {
@@ -90,7 +93,7 @@ public class PostService {
             }
         }
 
-        // 6. AI 해시태그 생성 및 연결
+        // 7. AI 해시태그 생성 및 연결
         List<Hashtag> hashtags = hashtagService.generateHashtagsForTripShare(trip);
         for (Hashtag hashtag : hashtags) {
             PostHashtagId postHashtagId = new PostHashtagId(savedPost.getPostId(), hashtag.getHashtagId());
@@ -102,7 +105,7 @@ public class PostService {
             postHashtagRepository.save(postHashtag);
         }
 
-        // 7. Response 생성
+        // 8. Response 생성
         return PostDetailsResponse.from(savedPost, user, trip, postImages, hashtags, false);
     }
 

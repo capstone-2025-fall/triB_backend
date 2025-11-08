@@ -1,8 +1,6 @@
 package triB.triB.community.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,13 +11,7 @@ public class TripSharePostCreateRequest {
     @NotNull(message = "여행 ID는 필수입니다.")
     private Long tripId;
 
-    @NotBlank(message = "제목은 필수입니다.")
-    @Size(max = 100, message = "제목은 100자 이내로 입력해주세요.")
-    private String title;
-
-    @NotBlank(message = "내용은 필수입니다.")
-    @Size(max = 5000, message = "내용은 5000자 이내로 입력해주세요.")
-    private String content;
-
+    // 제목은 해당 여행을 생성한 채팅방의 room_name을 사용
+    // content는 일정 공유 게시글에서는 사용하지 않음
     // 이미지는 MultipartFile로 별도 처리
 }
