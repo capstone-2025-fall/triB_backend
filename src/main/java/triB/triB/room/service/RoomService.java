@@ -257,7 +257,6 @@ public class RoomService {
         List<RoomsResponse> responses = new ArrayList<>();
         for (Room r : rooms) {
             Message msg = lastMessageMap.get(r.getRoomId());
-
             RoomsResponse response = RoomsResponse.builder()
                     .roomId(r.getRoomId())
                     .roomName(r.getRoomName())
