@@ -49,7 +49,7 @@ public class Schedule {
     @Column(name = "longitude", nullable = false)
     private Double longitude;
 
-    @Column(name = "isVisit", nullable = false)
+    @Column(name = "is_visit", nullable = false)
     private Boolean isVisit;
 
     @Column(name = "arrival", nullable = false)
