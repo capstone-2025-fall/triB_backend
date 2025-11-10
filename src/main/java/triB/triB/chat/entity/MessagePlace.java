@@ -27,7 +27,7 @@ public class MessagePlace {
     @Column(name = "message_place_id")
     private Long messagePlaceId;
 
-    @JoinColumn(name = "message_id", nullable = false)
+    @JoinColumn(name = "message_id", nullable = true)
     @OneToOne
     private Message message;
 
