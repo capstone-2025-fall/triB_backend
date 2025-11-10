@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import triB.triB.auth.entity.User;
 import triB.triB.chat.dto.*;
 import triB.triB.chat.entity.*;
@@ -22,12 +23,15 @@ import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
 import triB.triB.friendship.dto.UserResponse;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.room.entity.Room;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.schedule.entity.Schedule;
 import triB.triB.schedule.entity.Trip;
 import triB.triB.schedule.entity.TripStatus;
+import triB.triB.schedule.entity.VersionStatus;
 import triB.triB.schedule.repository.ScheduleRepository;
 import triB.triB.schedule.repository.TripRepository;
 
@@ -155,51 +159,67 @@ public class ChatService {
                 .retrieve()
                 .onStatus(
                         HttpStatusCode::is4xxClientError,
-                        res -> res.createException().flatMap(Mono::error)
+                        res -> res.createException().flatMap(e -> {
+                            log.error("AI 모델 요청 오류: {}", e.getMessage());
+                            return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
+                        })
                 )
                 .onStatus(
                         HttpStatusCode::is5xxServerError,
-                        res -> res.createException().flatMap(Mono::error)
+                        res -> res.createException().flatMap(e -> {
+                            log.error("AI 모델 서버 오류: {}", e.getMessage());
+                            return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
+                        })
                 )
                 .bodyToMono(ModelResponse.class)
-                .map(body -> {
-                    //todo trip 저장
-                    Trip t = Trip.builder()
-                            .roomId(roomId)
-                            .destination(room.getDestination())
-                            .tripStatus(TripStatus.READY)
-                            .build();
-                    tripRepository.save(t);
-
-                    body.getItinerary().stream()
-                            .forEach(itinerary -> {
-                                itinerary.getVisits()
-                                        .forEach((visit) -> {
-                                            LocalDate date = room.getStartDate()
-                                                    .plusDays(itinerary.getDay() - 1); // + dayNumber - 1
-                                            LocalDateTime arrival = date.atTime(LocalTime.parse(visit.getArrival()));
-                                            LocalDateTime departure = date.atTime(LocalTime.parse(visit.getDeparture()));
-
-                                            Schedule schedule = Schedule.builder()
-                                                    .tripId(t.getTripId())
-                                                    .dayNumber(itinerary.getDay())
-                                                    .date(date)
-                                                    .visitOrder(visit.getOrder())
-                                                    .placeName(visit.getDisplayName())
-                                                    .placeTag(visit.getPlaceTag())
-                                                    .latitude(visit.getLatitude())
-                                                    .longitude(visit.getLongitude())
-                                                    .isVisit(false)
-                                                    .arrival(arrival)
-                                                    .departure(departure)
-                                                    .travelTime(String.valueOf(visit.getTravelTime()))
-                                                    .build();
-                                            scheduleRepository.save(schedule);
-                                        });
-                            });
-
-                    return t.getTripId();
+                .map(body -> saveTripAndSchedule(room, body))
+                .onErrorResume(e -> {
+                    log.error("Trip 저장 실패", e.getMessage());
+                    return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
                 });
+    }
+
+    @Transactional
+    protected Long saveTripAndSchedule(Room room, ModelResponse body) {
+        Trip existingTrip = tripRepository.findByRoomId(room.getRoomId());
+        if (existingTrip != null){
+            existingTrip.setVersionStatus(VersionStatus.OLD);
+            tripRepository.save(existingTrip);
+        }
+        Trip t = Trip.builder()
+                .roomId(room.getRoomId())
+                .destination(room.getDestination())
+                .tripStatus(TripStatus.READY)
+                .build();
+        tripRepository.save(t);
+
+        body.getItinerary().stream()
+                .forEach(itinerary -> {
+                    itinerary.getVisits()
+                            .forEach((visit) -> {
+                                LocalDate date = room.getStartDate()
+                                        .plusDays(itinerary.getDay() - 1); // + dayNumber - 1
+                                LocalDateTime arrival = date.atTime(LocalTime.parse(visit.getArrival()));
+                                LocalDateTime departure = date.atTime(LocalTime.parse(visit.getDeparture()));
+
+                                Schedule schedule = Schedule.builder()
+                                        .tripId(t.getTripId())
+                                        .dayNumber(itinerary.getDay())
+                                        .date(date)
+                                        .visitOrder(visit.getOrder())
+                                        .placeName(visit.getDisplayName())
+                                        .placeTag(visit.getPlaceTag())
+                                        .latitude(visit.getLatitude())
+                                        .longitude(visit.getLongitude())
+                                        .isVisit(false)
+                                        .arrival(arrival)
+                                        .departure(departure)
+                                        .travelTime(String.valueOf(visit.getTravelTime()))
+                                        .build();
+                                scheduleRepository.save(schedule);
+                            });
+                });
+        return t.getTripId();
     }
 
     private PlaceDetail makePlaceDetail(Long messageId) {
