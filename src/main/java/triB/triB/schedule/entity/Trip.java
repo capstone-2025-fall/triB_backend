@@ -54,7 +54,11 @@ public class Trip {
     @Builder.Default
     @Column(name = "is_bookmarked", nullable = false)
     private Boolean isBookmarked = false;
-    
+
+    @Column(name = "travel_mode", length = 20)
+    @Enumerated(EnumType.STRING)
+    private TravelMode travelMode;
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
