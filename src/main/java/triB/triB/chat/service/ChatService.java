@@ -141,7 +141,7 @@ public class ChatService {
         }
 
         ModelRequest modelRequest = ModelRequest.builder()
-                .days((Integer) (int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
+                .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
                 .startDate(room.getStartDate().toString())
                 .country(room.getDestination())
                 .members(userRoomRepository.countByRoom_RoomId(roomId))
@@ -189,7 +189,8 @@ public class ChatService {
         Trip t = Trip.builder()
                 .roomId(room.getRoomId())
                 .destination(room.getDestination())
-                .tripStatus(TripStatus.READY)
+                .versionStatus(VersionStatus.NEW)
+                .travelMode(body.getTravelMode())
                 .build();
         tripRepository.save(t);
 
