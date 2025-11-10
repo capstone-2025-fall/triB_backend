@@ -16,7 +16,7 @@ public enum ErrorCode {
 
     MODEL_REQUEST_ERROR(HttpStatus.BAD_REQUEST, "MODEL_REQUEST_ERROR", "일정 생성 요청이 잘못되었습니다."),
     MODEL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MODEL_ERROR", "일정 생성 모델에 일시적인 문제가 발생했습니다."),
-    TRIP_SAVE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "TRIP_SAVE_FAIL", "일정 저장 중 오류가 발생했습니다.");
+    TRIP_SAVE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "TRIP_SAVE_FAIL", "일정 저장 중 오류가 발생했습니다."),
 
     // Community 관련 에러
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
