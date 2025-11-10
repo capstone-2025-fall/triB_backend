@@ -11,6 +11,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import triB.triB.community.exception.CommentNotFoundException;
+import triB.triB.community.exception.PostNotFoundException;
+import triB.triB.community.exception.UnauthorizedPostAccessException;
 import triB.triB.global.response.ApiResponse;
 
 @RestControllerAdvice
@@ -24,6 +27,43 @@ public class GlobalExceptionHandler {
                 e.getErrorCode().getMessage()
         );
     }
+
+    /**
+     * 커뮤니티 - 게시글을 찾을 수 없음(404) 처리
+     */
+    @ExceptionHandler(PostNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePostNotFoundException(PostNotFoundException ex) {
+        return ApiResponse.fail(
+                ex.getErrorCode().getHttpStatus(),
+                ex.getErrorCode().getCode(),
+                ex.getErrorCode().getMessage()
+        );
+    }
+
+    /**
+     * 커뮤니티 - 댓글을 찾을 수 없음(404) 처리
+     */
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCommentNotFoundException(CommentNotFoundException ex) {
+        return ApiResponse.fail(
+                ex.getErrorCode().getHttpStatus(),
+                ex.getErrorCode().getCode(),
+                ex.getErrorCode().getMessage()
+        );
+    }
+
+    /**
+     * 커뮤니티 - 게시글 권한 없음(403) 처리
+     */
+    @ExceptionHandler(UnauthorizedPostAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnauthorizedPostAccessException(UnauthorizedPostAccessException ex) {
+        return ApiResponse.fail(
+                ex.getErrorCode().getHttpStatus(),
+                ex.getErrorCode().getCode(),
+                ex.getErrorCode().getMessage()
+        );
+    }
+
     /**
      * 요청 검증(@Valid) 실패/바인딩 실패 공통 처리
      */

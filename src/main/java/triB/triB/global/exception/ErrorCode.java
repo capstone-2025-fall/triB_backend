@@ -18,6 +18,13 @@ public enum ErrorCode {
     MODEL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MODEL_ERROR", "일정 생성 모델에 일시적인 문제가 발생했습니다."),
     TRIP_SAVE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "TRIP_SAVE_FAIL", "일정 저장 중 오류가 발생했습니다.");
 
+    // Community 관련 에러
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다."),
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", "댓글을 찾을 수 없습니다."),
+    UNAUTHORIZED_POST_ACCESS(HttpStatus.FORBIDDEN, "UNAUTHORIZED_POST_ACCESS", "게시글에 대한 권한이 없습니다."),
+    TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "여행 정보를 찾을 수 없습니다."),
+    USER_NOT_IN_TRIP(HttpStatus.FORBIDDEN, "USER_NOT_IN_TRIP", "해당 여행의 참여자가 아닙니다."),
+    INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "INVALID_HASHTAG", "유효하지 않은 해시태그입니다. Predefined 해시태그만 사용 가능합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

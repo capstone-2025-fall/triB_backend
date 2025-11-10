@@ -35,6 +35,7 @@ public class UserRoom {
     private Room room;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "room_status", nullable = false)
     private RoomStatus roomStatus = RoomStatus.ACTIVE;
 }
