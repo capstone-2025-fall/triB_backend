@@ -7,4 +7,6 @@ import triB.triB.schedule.entity.Trip;
 
 @Repository
 public interface TripRepository extends JpaRepository<Trip, Long> {
+
+    Trip findByRoomId(Long roomId);
 }

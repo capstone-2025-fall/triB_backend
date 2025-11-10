@@ -2,6 +2,7 @@ package triB.triB.schedule.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Where;
 import triB.triB.room.entity.Room;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -18,9 +19,11 @@ import java.time.LocalDateTime;
 @Table(
         name = "trips",
         indexes = {
-                @Index(name = "idx_trips_destination", columnList = "destination")
+                @Index(name = "idx_trips_destination", columnList = "destination"),
+                @Index(name = "idx_trips_room_id", columnList = "room_id")
         }
 )
+@Where(clause = "version_status = 'NEW'")
 public class Trip {
     
     @Id
@@ -37,7 +40,12 @@ public class Trip {
 
     @Column(name = "destination", nullable = false)
     private String destination;
-    
+
+    @Builder.Default
+    @Column(name = "version_status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private VersionStatus versionStatus = VersionStatus.NEW;
+
     @Builder.Default
     @Column(name = "trip_status", nullable = false)
     @Enumerated(EnumType.STRING)
