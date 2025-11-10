@@ -186,6 +186,30 @@ public class RoomService {
                 .toList();
     }
 
+    public List<UserResponse> getUsersInRoom(Long userId, Long roomId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId)){
+            throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
+        }
+        List<UserResponse> responses = new ArrayList<>();
+        UserResponse me = new UserResponse(userId, user.getNickname(), user.getPhotoUrl());
+        responses.add(me);
+
+        responses.addAll(userRoomRepository.findByRoom_RoomIdAndNotUser_UserId(roomId, userId).stream()
+                        .map(userRoom -> {
+                            User u = userRoom.getUser();
+                            return UserResponse.builder()
+                                    .userId(u.getUserId())
+                                    .nickname(u.getNickname())
+                                    .photoUrl(u.getPhotoUrl())
+                                    .build();
+                        })
+        .toList());
+        return responses;
+    }
+
     // todo batch 조회 형식으로 수정해서 조회 최적화하기
     private List<RoomsResponse> roomList(List<UserRoom> userRooms, Long userId) {
         if (userRooms.isEmpty()) {

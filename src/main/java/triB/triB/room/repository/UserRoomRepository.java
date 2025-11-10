@@ -40,4 +40,7 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
 
     @Query("select count(ur.user) from UserRoom ur where ur.room.roomId = :roomId")
     Integer countByRoom_RoomId(@Param("roomId") Long roomId);
+
+    @Query("select ur from UserRoom ur where ur.room.roomId = :roomId and ur.user.userId != :userId order by ur.user.nickname asc")
+    List<UserRoom> findByRoom_RoomIdAndNotUser_UserId(Long roomId, Long userId);
 }

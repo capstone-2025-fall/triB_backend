@@ -97,4 +97,14 @@ public class RoomController {
         List<UserResponse> response = roomService.getUsersInvitable(userId, roomId);
         return ApiResponse.ok("해당 채팅방에 초대할 수 있는 친구목록을 조회했습니다.", response);
     }
+
+    @GetMapping("/{roomId}/users")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getUsers(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable(name = "roomId") Long roomId
+    ){
+        Long userId = userPrincipal.getUserId();
+        List<UserResponse> response = roomService.getUsersInRoom(userId, roomId);
+        return ApiResponse.ok("채팅방의 유저 프로필을 불러왔습니다.", response);
+    }
 }
