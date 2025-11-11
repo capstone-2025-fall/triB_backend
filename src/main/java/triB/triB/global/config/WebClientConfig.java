@@ -38,4 +38,15 @@ public class WebClientConfig {
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
+
+    @Bean
+    public WebClient googleRoutesWebClient(
+            @Value("${google.routes.base-url}") String baseUrl,
+            @Value("${google.routes.api.key}") String apiKey) {
+        return WebClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader("X-Goog-Api-Key", apiKey)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
 }
