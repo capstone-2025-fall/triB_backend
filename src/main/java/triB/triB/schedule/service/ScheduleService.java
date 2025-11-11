@@ -13,6 +13,7 @@ import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
+import triB.triB.schedule.dto.UpdateVisitTimeRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
 import triB.triB.schedule.entity.Schedule;
@@ -188,6 +189,43 @@ public class ScheduleService {
         LocalDateTime newDeparture = arrival.plusMinutes(request.getStayMinutes());
 
         // departure 시간 업데이트
+        schedule.setDeparture(newDeparture);
+
+        // 이후 일정들의 시간 연쇄 수정
+        Integer dayNumber = schedule.getDayNumber();
+        recalculateDepartureTimes(tripId, dayNumber);
+
+        // JPA dirty checking으로 자동 업데이트
+
+        // 응답 DTO 생성 및 반환
+        return mapToScheduleItemResponse(schedule);
+    }
+
+    /**
+     * 일정의 방문(arrival) 시간 수정
+     */
+    @Transactional
+    public ScheduleItemResponse updateVisitTime(Long tripId, Long scheduleId, UpdateVisitTimeRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Schedule 조회
+        Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+        // 기존 체류시간 계산 (분 단위)
+        LocalDateTime currentArrival = schedule.getArrival();
+        LocalDateTime currentDeparture = schedule.getDeparture();
+        long stayMinutes = Duration.between(currentArrival, currentDeparture).toMinutes();
+
+        // 새로운 arrival 시간 설정: 현재 날짜 + 요청받은 시간
+        LocalDateTime newArrival = schedule.getDate().atTime(request.getNewArrivalTime());
+
+        // 새로운 departure 시간 계산: 새 arrival + 기존 체류시간
+        LocalDateTime newDeparture = newArrival.plusMinutes(stayMinutes);
+
+        // 시간 업데이트
+        schedule.setArrival(newArrival);
         schedule.setDeparture(newDeparture);
 
         // 이후 일정들의 시간 연쇄 수정
