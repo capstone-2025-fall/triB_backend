@@ -9,6 +9,8 @@ import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.VisitStatusUpdateRequest;
+import triB.triB.schedule.dto.VisitStatusUpdateResponse;
 import triB.triB.schedule.entity.Schedule;
 import triB.triB.schedule.entity.Trip;
 import triB.triB.schedule.repository.ScheduleRepository;
@@ -78,6 +80,30 @@ public class ScheduleService {
                 .endDate(room.getEndDate())
                 .currentDay(targetDayNumber)
                 .schedules(scheduleItems)
+                .build();
+    }
+
+    /**
+     * 일정의 방문 완료 상태 변경
+     */
+    @Transactional
+    public VisitStatusUpdateResponse updateVisitStatus(Long tripId, Long scheduleId, VisitStatusUpdateRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Schedule 조회
+        Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+        // 방문 상태 업데이트
+        schedule.setIsVisit(request.getIsVisit());
+
+        // JPA dirty checking으로 자동 업데이트
+
+        // 응답 DTO 생성 및 반환
+        return VisitStatusUpdateResponse.builder()
+                .scheduleId(schedule.getScheduleId())
+                .isVisit(schedule.getIsVisit())
                 .build();
     }
 
