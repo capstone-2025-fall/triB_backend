@@ -24,7 +24,13 @@ public enum ErrorCode {
     UNAUTHORIZED_POST_ACCESS(HttpStatus.FORBIDDEN, "UNAUTHORIZED_POST_ACCESS", "게시글에 대한 권한이 없습니다."),
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "여행 정보를 찾을 수 없습니다."),
     USER_NOT_IN_TRIP(HttpStatus.FORBIDDEN, "USER_NOT_IN_TRIP", "해당 여행의 참여자가 아닙니다."),
-    INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "INVALID_HASHTAG", "유효하지 않은 해시태그입니다. Predefined 해시태그만 사용 가능합니다.");
+    INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "INVALID_HASHTAG", "유효하지 않은 해시태그입니다. Predefined 해시태그만 사용 가능합니다."),
+
+    // Schedule 관련 에러
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다."),
+    ACCOMMODATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOMMODATION_NOT_FOUND", "숙소를 찾을 수 없습니다."),
+    INVALID_VISIT_ORDER(HttpStatus.BAD_REQUEST, "INVALID_VISIT_ORDER", "유효하지 않은 방문 순서입니다."),
+    ROUTES_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ROUTES_API_ERROR", "경로 계산 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
