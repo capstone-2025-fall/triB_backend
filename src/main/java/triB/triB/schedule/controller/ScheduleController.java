@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
+import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
 import triB.triB.schedule.service.ScheduleService;
@@ -99,5 +101,32 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("일정 순서를 변경했습니다.", response);
+    }
+
+    @PatchMapping("/{scheduleId}/stay-duration")
+    @Operation(
+            summary = "체류시간 수정",
+            description = "특정 일정의 체류시간을 수정하고 이후 일정 시간을 재계산합니다."
+    )
+    public ResponseEntity<ApiResponse<ScheduleItemResponse>> updateStayDuration(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 ID", required = true)
+            @PathVariable Long scheduleId,
+
+            @Parameter(description = "체류시간 수정 요청", required = true)
+            @RequestBody @Valid UpdateStayDurationRequest request,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        ScheduleItemResponse response = scheduleService.updateStayDuration(
+                tripId,
+                scheduleId,
+                request,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("체류시간을 수정했습니다.", response);
     }
 }
