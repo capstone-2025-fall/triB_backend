@@ -13,6 +13,7 @@ import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.UpdateVisitTimeRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
@@ -422,6 +423,109 @@ public class ScheduleService {
     }
 
     /**
+     * 숙소 변경
+     * @param tripId 여행 ID
+     * @param request 숙소 변경 요청 DTO
+     * @param userId 사용자 ID
+     * @return 변경된 숙소 정보
+     */
+    @Transactional
+    public ScheduleItemResponse updateAccommodation(Long tripId, UpdateAccommodationRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // 숙소 Schedule 조회
+        Schedule accommodation = findAccommodationSchedule(tripId, request.getDayNumber());
+        if (accommodation == null) {
+            throw new IllegalArgumentException("해당 날짜에 숙소를 찾을 수 없습니다.");
+        }
+
+        // 기존 체류시간 저장 (arrival과 departure 간격)
+        Duration existingStayDuration = Duration.between(accommodation.getArrival(), accommodation.getDeparture());
+
+        // 숙소 정보 업데이트
+        accommodation.setPlaceName(request.getPlaceName());
+        accommodation.setLatitude(request.getLatitude());
+        accommodation.setLongitude(request.getLongitude());
+
+        // Trip의 travelMode 조회
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+        TravelMode travelMode = trip.getTravelMode() != null ? trip.getTravelMode() : TravelMode.DRIVE;
+
+        // 해당 날짜의 모든 일정 조회 (visitOrder 순)
+        List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, request.getDayNumber())
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .collect(Collectors.toList());
+
+        // 숙소로 도착하는 이동시간 재계산 (이전 일정 → 숙소)
+        Schedule previousSchedule = null;
+        for (int i = 0; i < daySchedules.size(); i++) {
+            if (daySchedules.get(i).getScheduleId().equals(accommodation.getScheduleId())) {
+                if (i > 0) {
+                    previousSchedule = daySchedules.get(i - 1);
+                }
+                break;
+            }
+        }
+
+        if (previousSchedule != null && previousSchedule.getPlaceTag() != PlaceTag.HOME) {
+            // 이전 일정에서 숙소까지의 이동시간 계산
+            Integer travelTimeMinutes = routesApiService.calculateTravelTime(
+                    previousSchedule.getLatitude(),
+                    previousSchedule.getLongitude(),
+                    accommodation.getLatitude(),
+                    accommodation.getLongitude(),
+                    travelMode
+            );
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelTimeMinutes);
+            previousSchedule.setTravelTime(travelTimeText);
+
+            // 숙소 arrival 시간 재계산
+            LocalDateTime newArrival = previousSchedule.getDeparture().plusMinutes(travelTimeMinutes);
+            accommodation.setArrival(newArrival);
+            accommodation.setDeparture(newArrival.plus(existingStayDuration));
+        }
+
+        // 다음날 첫 일정 확인 및 이동시간 재계산 (숙소 → 다음날 첫 일정)
+        List<Schedule> nextDaySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, request.getDayNumber() + 1)
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .collect(Collectors.toList());
+
+        if (!nextDaySchedules.isEmpty()) {
+            Schedule firstScheduleNextDay = nextDaySchedules.get(0);
+
+            // 숙소에서 다음날 첫 일정까지의 이동시간 계산
+            Integer travelTimeMinutes = routesApiService.calculateTravelTime(
+                    accommodation.getLatitude(),
+                    accommodation.getLongitude(),
+                    firstScheduleNextDay.getLatitude(),
+                    firstScheduleNextDay.getLongitude(),
+                    travelMode
+            );
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelTimeMinutes);
+            accommodation.setTravelTime(travelTimeText);
+
+            // 다음날 첫 일정의 arrival 시간 재계산
+            LocalDateTime nextDayArrival = accommodation.getDeparture().plusMinutes(travelTimeMinutes);
+            firstScheduleNextDay.setArrival(nextDayArrival);
+
+            // 다음날 전체 일정의 departure 시간 재계산
+            recalculateDepartureTimes(tripId, request.getDayNumber() + 1);
+        }
+
+        // 현재 날짜의 departure 시간 재계산
+        recalculateDepartureTimes(tripId, request.getDayNumber());
+
+        // JPA dirty checking으로 자동 업데이트
+
+        // 응답 DTO 생성 및 반환
+        return mapToScheduleItemResponse(accommodation);
+    }
+
+    /**
      * 특정 날짜의 일정들 간 이동시간 재계산
      */
     private void recalculateDayTravelTimes(Long tripId, Integer dayNumber) {
@@ -559,6 +663,23 @@ public class ScheduleService {
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    /**
+     * 특정 날짜의 숙소 일정 조회
+     * @param tripId 여행 ID
+     * @param dayNumber 숙소가 위치한 날짜 (일차)
+     * @return 숙소 Schedule 엔티티, 없으면 null
+     */
+    private Schedule findAccommodationSchedule(Long tripId, Integer dayNumber) {
+        // 해당 날짜의 모든 일정 조회
+        List<Schedule> schedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber);
+
+        // PlaceTag가 HOME인 일정 찾기
+        return schedules.stream()
+                .filter(schedule -> schedule.getPlaceTag() == PlaceTag.HOME)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
