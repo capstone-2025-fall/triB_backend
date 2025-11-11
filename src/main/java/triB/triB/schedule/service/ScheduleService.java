@@ -7,6 +7,8 @@ import triB.triB.room.entity.Room;
 import triB.triB.room.entity.UserRoomId;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
+import triB.triB.chat.entity.PlaceTag;
+import triB.triB.schedule.dto.AddScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -20,6 +22,7 @@ import triB.triB.schedule.repository.ScheduleRepository;
 import triB.triB.schedule.repository.TripRepository;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -195,6 +198,142 @@ public class ScheduleService {
 
         // 응답 DTO 생성 및 반환
         return mapToScheduleItemResponse(schedule);
+    }
+
+    /**
+     * 특정 날짜의 마지막 일정으로 새로운 장소 추가 (숙소 전)
+     */
+    @Transactional
+    public ScheduleItemResponse addScheduleToDay(Long tripId, AddScheduleRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Trip 조회
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+        // Room 조회 (날짜 계산용)
+        Room room = roomRepository.findById(trip.getRoomId())
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+        // 날짜 계산: startDate + (dayNumber - 1)
+        LocalDate scheduleDate = room.getStartDate().plusDays(request.getDayNumber() - 1);
+
+        // 해당 날짜의 기존 일정 조회 (visitOrder 순으로 정렬)
+        List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, request.getDayNumber())
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .collect(Collectors.toList());
+
+        // 마지막 visitOrder 확인 (숙소 제외)
+        Integer newVisitOrder;
+        Schedule lastNonAccommodationSchedule = null;
+
+        if (daySchedules.isEmpty()) {
+            // 해당 날짜에 일정이 없으면 첫 번째 일정
+            newVisitOrder = 1;
+        } else {
+            // 숙소(HOME)가 아닌 마지막 일정 찾기
+            for (int i = daySchedules.size() - 1; i >= 0; i--) {
+                if (daySchedules.get(i).getPlaceTag() != PlaceTag.HOME) {
+                    lastNonAccommodationSchedule = daySchedules.get(i);
+                    break;
+                }
+            }
+
+            if (lastNonAccommodationSchedule != null) {
+                newVisitOrder = lastNonAccommodationSchedule.getVisitOrder() + 1;
+            } else {
+                // 모든 일정이 숙소인 경우 (드문 케이스)
+                newVisitOrder = daySchedules.size() + 1;
+            }
+        }
+
+        // 이전 일정과의 travelTime 계산 및 arrival/departure 시간 설정
+        LocalDateTime newArrival;
+        LocalDateTime newDeparture;
+
+        if (lastNonAccommodationSchedule != null) {
+            // 이전 일정이 있는 경우: 이전 departure + travelTime
+            TravelMode travelMode = trip.getTravelMode() != null ? trip.getTravelMode() : TravelMode.DRIVE;
+
+            // Routes API로 이동시간 계산 (분 단위)
+            Integer travelMinutes = routesApiService.calculateTravelTime(
+                    lastNonAccommodationSchedule.getLatitude(),
+                    lastNonAccommodationSchedule.getLongitude(),
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    travelMode
+            );
+
+            // 이전 일정의 travelTime 업데이트
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelMinutes);
+            lastNonAccommodationSchedule.setTravelTime(travelTimeText);
+
+            // 새 일정의 arrival = 이전 departure + travelTime
+            newArrival = lastNonAccommodationSchedule.getDeparture().plusMinutes(travelMinutes);
+            newDeparture = newArrival.plusMinutes(request.getStayMinutes());
+        } else {
+            // 첫 번째 일정인 경우: 기본 시작 시간 설정 (오전 9시)
+            newArrival = scheduleDate.atTime(9, 0);
+            newDeparture = newArrival.plusMinutes(request.getStayMinutes());
+        }
+
+        // 새로운 Schedule 엔티티 생성
+        Schedule newSchedule = Schedule.builder()
+                .tripId(tripId)
+                .dayNumber(request.getDayNumber())
+                .date(scheduleDate)
+                .visitOrder(newVisitOrder)
+                .placeName(request.getPlaceName())
+                .placeTag(request.getPlaceTag())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .isVisit(false)
+                .arrival(newArrival)
+                .departure(newDeparture)
+                .travelTime(null) // 초기에는 null, 이후 계산
+                .build();
+
+        // 새 일정 저장
+        Schedule savedSchedule = scheduleRepository.save(newSchedule);
+
+        // 숙소가 있다면 새 일정과 숙소 간 travelTime 계산
+        Schedule accommodationSchedule = null;
+        for (Schedule schedule : daySchedules) {
+            if (schedule.getPlaceTag() == PlaceTag.HOME && schedule.getVisitOrder() > newVisitOrder) {
+                accommodationSchedule = schedule;
+                break;
+            }
+        }
+
+        if (accommodationSchedule != null) {
+            TravelMode travelMode = trip.getTravelMode() != null ? trip.getTravelMode() : TravelMode.DRIVE;
+
+            // 새 일정에서 숙소까지 이동시간 계산
+            Integer travelMinutes = routesApiService.calculateTravelTime(
+                    savedSchedule.getLatitude(),
+                    savedSchedule.getLongitude(),
+                    accommodationSchedule.getLatitude(),
+                    accommodationSchedule.getLongitude(),
+                    travelMode
+            );
+
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelMinutes);
+            savedSchedule.setTravelTime(travelTimeText);
+
+            // 숙소의 arrival 시간 업데이트
+            LocalDateTime accommodationArrival = savedSchedule.getDeparture().plusMinutes(travelMinutes);
+            accommodationSchedule.setArrival(accommodationArrival);
+
+            // 숙소는 일반적으로 체크인 후 다음날까지 머물므로 departure는 다음날 아침
+            // 기존 체류시간 유지
+            long stayMinutes = Duration.between(accommodationSchedule.getArrival(), accommodationSchedule.getDeparture()).toMinutes();
+            accommodationSchedule.setDeparture(accommodationArrival.plusMinutes(stayMinutes));
+        }
+
+        // 응답 DTO 생성 및 반환
+        return mapToScheduleItemResponse(savedSchedule);
     }
 
     /**
