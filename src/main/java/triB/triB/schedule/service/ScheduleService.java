@@ -9,6 +9,7 @@ import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.chat.entity.PlaceTag;
 import triB.triB.schedule.dto.AddScheduleRequest;
+import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -372,6 +373,52 @@ public class ScheduleService {
 
         // 응답 DTO 생성 및 반환
         return mapToScheduleItemResponse(savedSchedule);
+    }
+
+    /**
+     * 일정 삭제
+     */
+    @Transactional
+    public DeleteScheduleResponse deleteSchedule(Long tripId, Long scheduleId, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Schedule 조회
+        Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+        // dayNumber, visitOrder 저장
+        Integer dayNumber = schedule.getDayNumber();
+        Integer deletedVisitOrder = schedule.getVisitOrder();
+
+        // Schedule 삭제
+        scheduleRepository.delete(schedule);
+
+        // 해당 날짜의 모든 일정 조회 (삭제 후)
+        List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber)
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .collect(Collectors.toList());
+
+        // 삭제된 visitOrder보다 큰 일정들의 visitOrder를 -1씩 감소
+        for (Schedule s : daySchedules) {
+            if (s.getVisitOrder() > deletedVisitOrder) {
+                s.setVisitOrder(s.getVisitOrder() - 1);
+            }
+        }
+
+        // 이동시간 재계산
+        recalculateDayTravelTimes(tripId, dayNumber);
+
+        // 출발/도착 시간 재계산
+        recalculateDepartureTimes(tripId, dayNumber);
+
+        // JPA dirty checking으로 자동 업데이트
+
+        // 응답 DTO 생성 및 반환
+        return DeleteScheduleResponse.builder()
+                .deletedScheduleId(scheduleId)
+                .build();
     }
 
     /**

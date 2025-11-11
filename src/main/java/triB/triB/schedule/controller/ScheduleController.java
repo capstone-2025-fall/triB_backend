@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.schedule.dto.AddScheduleRequest;
+import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -180,5 +181,28 @@ public class ScheduleController {
         );
 
         return ApiResponse.created("일정을 추가했습니다.", response);
+    }
+
+    @DeleteMapping("/{scheduleId}")
+    @Operation(
+            summary = "일정 삭제",
+            description = "특정 일정을 삭제하고 이후 일정의 순서와 이동시간을 재계산합니다."
+    )
+    public ResponseEntity<ApiResponse<DeleteScheduleResponse>> deleteSchedule(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 ID", required = true)
+            @PathVariable Long scheduleId,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        DeleteScheduleResponse response = scheduleService.deleteSchedule(
+                tripId,
+                scheduleId,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("일정을 삭제했습니다.", response);
     }
 }
