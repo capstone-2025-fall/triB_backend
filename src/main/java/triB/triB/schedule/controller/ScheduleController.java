@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
+import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.TripScheduleResponse;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
@@ -71,5 +72,32 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("방문 상태를 변경했습니다.", response);
+    }
+
+    @PatchMapping("/{scheduleId}/reorder")
+    @Operation(
+            summary = "일정 순서 변경",
+            description = "특정 날짜의 일정 순서를 변경하고 이동시간을 재계산합니다."
+    )
+    public ResponseEntity<ApiResponse<TripScheduleResponse>> reorderSchedule(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 ID", required = true)
+            @PathVariable Long scheduleId,
+
+            @Parameter(description = "순서 변경 요청", required = true)
+            @RequestBody @Valid ReorderScheduleRequest request,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        TripScheduleResponse response = scheduleService.reorderSchedule(
+                tripId,
+                scheduleId,
+                request,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("일정 순서를 변경했습니다.", response);
     }
 }
