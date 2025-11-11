@@ -18,6 +18,8 @@ import triB.triB.global.security.JwtAuthenticationFilter;
 import triB.triB.global.security.JwtProvider;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.schedule.dto.*;
+
+import java.time.LocalTime;
 import triB.triB.schedule.service.ScheduleService;
 
 import java.time.LocalDate;
@@ -266,5 +268,119 @@ class ScheduleControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidRequest))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/preview - 일정 변경 미리보기 성공")
+    void previewScheduleChanges_Success() throws Exception {
+        // given
+        ScheduleModificationItem modification1 = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.REORDER)
+                .scheduleId(scheduleId)
+                .newVisitOrder(2)
+                .build();
+
+        ScheduleModificationItem modification2 = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_STAY_DURATION)
+                .scheduleId(scheduleId)
+                .stayMinutes(90)
+                .build();
+
+        PreviewScheduleRequest request = PreviewScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(modification1, modification2))
+                .build();
+
+        when(scheduleService.previewScheduleChanges(eq(tripId), any(), eq(userId)))
+                .thenReturn(tripScheduleResponse);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/preview", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("일정 변경사항을 미리보기합니다."))
+                .andExpect(jsonPath("$.data.tripId").value(tripId));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/batch-update - 일정 일괄 수정 성공")
+    void batchUpdateSchedule_Success() throws Exception {
+        // given
+        ScheduleModificationItem modification = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.ADD)
+                .dayNumber(1)
+                .placeName("남산타워")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5512)
+                .longitude(126.9882)
+                .stayMinutes(60)
+                .build();
+
+        BatchUpdateScheduleRequest request = BatchUpdateScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(modification))
+                .build();
+
+        when(scheduleService.batchUpdateSchedule(eq(tripId), any(), eq(userId)))
+                .thenReturn(tripScheduleResponse);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/batch-update", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("일정 변경사항을 저장했습니다."))
+                .andExpect(jsonPath("$.data.tripId").value(tripId));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/preview - 복합 변경사항 미리보기")
+    void previewScheduleChanges_MultipleModifications() throws Exception {
+        // given - 삭제, 추가, 순서변경을 모두 포함
+        ScheduleModificationItem delete = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.DELETE)
+                .scheduleId(2L)
+                .build();
+
+        ScheduleModificationItem add = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.ADD)
+                .dayNumber(1)
+                .placeName("북촌한옥마을")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5834)
+                .longitude(126.9830)
+                .stayMinutes(90)
+                .build();
+
+        ScheduleModificationItem reorder = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.REORDER)
+                .scheduleId(scheduleId)
+                .newVisitOrder(1)
+                .build();
+
+        ScheduleModificationItem updateTime = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_VISIT_TIME)
+                .scheduleId(scheduleId)
+                .newArrivalTime(LocalTime.of(10, 30))
+                .build();
+
+        PreviewScheduleRequest request = PreviewScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(delete, add, reorder, updateTime))
+                .build();
+
+        when(scheduleService.previewScheduleChanges(eq(tripId), any(), eq(userId)))
+                .thenReturn(tripScheduleResponse);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/preview", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").exists());
     }
 }

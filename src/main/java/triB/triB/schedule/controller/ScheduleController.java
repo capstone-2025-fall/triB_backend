@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.schedule.dto.AddScheduleRequest;
+import triB.triB.schedule.dto.BatchUpdateScheduleRequest;
 import triB.triB.schedule.dto.DeleteScheduleResponse;
+import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -228,5 +230,51 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("숙소를 변경했습니다.", response);
+    }
+
+    @PostMapping("/schedules/preview")
+    @Operation(
+            summary = "일정 변경 미리보기",
+            description = "여러 일정 변경사항을 적용한 결과를 미리 확인합니다. DB에는 저장되지 않습니다."
+    )
+    public ResponseEntity<ApiResponse<TripScheduleResponse>> previewScheduleChanges(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 변경 미리보기 요청", required = true)
+            @RequestBody @Valid PreviewScheduleRequest request,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        TripScheduleResponse response = scheduleService.previewScheduleChanges(
+                tripId,
+                request,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("일정 변경사항을 미리보기합니다.", response);
+    }
+
+    @PostMapping("/schedules/batch-update")
+    @Operation(
+            summary = "일정 일괄 수정",
+            description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다."
+    )
+    public ResponseEntity<ApiResponse<TripScheduleResponse>> batchUpdateSchedule(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 일괄 수정 요청", required = true)
+            @RequestBody @Valid BatchUpdateScheduleRequest request,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        TripScheduleResponse response = scheduleService.batchUpdateSchedule(
+                tripId,
+                request,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("일정 변경사항을 저장했습니다.", response);
     }
 }

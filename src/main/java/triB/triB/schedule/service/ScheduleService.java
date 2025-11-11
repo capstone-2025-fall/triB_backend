@@ -9,9 +9,13 @@ import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.chat.entity.PlaceTag;
 import triB.triB.schedule.dto.AddScheduleRequest;
+import triB.triB.schedule.dto.BatchUpdateScheduleRequest;
 import triB.triB.schedule.dto.DeleteScheduleResponse;
+import triB.triB.schedule.dto.ModificationType;
+import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
+import triB.triB.schedule.dto.ScheduleModificationItem;
 import triB.triB.schedule.dto.TripScheduleResponse;
 import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
@@ -696,5 +700,100 @@ public class ScheduleService {
                 .visitOrder(schedule.getVisitOrder())
                 .isVisit(schedule.getIsVisit())
                 .build();
+    }
+
+    /**
+     * 일정 변경사항 미리보기
+     * 변경사항을 적용하되 DB에는 저장하지 않고 계산된 결과만 반환합니다.
+     */
+    @Transactional
+    public TripScheduleResponse previewScheduleChanges(Long tripId, PreviewScheduleRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // 변경사항을 적용하되, 마지막에 롤백할 것임
+        TripScheduleResponse result = applyModifications(tripId, request.getDayNumber(), request.getModifications(), userId);
+
+        // 트랜잭션을 롤백 상태로 설정 (DB에 저장되지 않음)
+        org.springframework.transaction.interceptor.TransactionAspectSupport
+                .currentTransactionStatus()
+                .setRollbackOnly();
+
+        return result;
+    }
+
+    /**
+     * 일정 일괄 수정
+     * 변경사항을 순차적으로 적용하고 DB에 저장합니다.
+     */
+    @Transactional
+    public TripScheduleResponse batchUpdateSchedule(Long tripId, BatchUpdateScheduleRequest request, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // 변경사항 적용 및 저장
+        return applyModifications(tripId, request.getDayNumber(), request.getModifications(), userId);
+    }
+
+    /**
+     * 변경사항을 순차적으로 적용하는 내부 메서드
+     */
+    private TripScheduleResponse applyModifications(
+            Long tripId,
+            Integer dayNumber,
+            List<ScheduleModificationItem> modifications,
+            Long userId
+    ) {
+        // 변경사항을 타입별로 순서대로 적용
+        // 순서: DELETE → ADD → REORDER → UPDATE_VISIT_TIME → UPDATE_STAY_DURATION
+
+        // 1. DELETE 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.DELETE)
+                .forEach(m -> {
+                    deleteSchedule(tripId, m.getScheduleId(), userId);
+                });
+
+        // 2. ADD 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.ADD)
+                .forEach(m -> {
+                    AddScheduleRequest addRequest = AddScheduleRequest.builder()
+                            .dayNumber(m.getDayNumber())
+                            .placeName(m.getPlaceName())
+                            .placeTag(m.getPlaceTag())
+                            .latitude(m.getLatitude())
+                            .longitude(m.getLongitude())
+                            .stayMinutes(m.getStayMinutes())
+                            .build();
+                    addScheduleToDay(tripId, addRequest, userId);
+                });
+
+        // 3. REORDER 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.REORDER)
+                .forEach(m -> {
+                    ReorderScheduleRequest reorderRequest = new ReorderScheduleRequest(m.getNewVisitOrder());
+                    reorderSchedule(tripId, m.getScheduleId(), reorderRequest, userId);
+                });
+
+        // 4. UPDATE_VISIT_TIME 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.UPDATE_VISIT_TIME)
+                .forEach(m -> {
+                    UpdateVisitTimeRequest updateTimeRequest = new UpdateVisitTimeRequest(m.getNewArrivalTime());
+                    updateVisitTime(tripId, m.getScheduleId(), updateTimeRequest, userId);
+                });
+
+        // 5. UPDATE_STAY_DURATION 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.UPDATE_STAY_DURATION)
+                .forEach(m -> {
+                    UpdateStayDurationRequest updateDurationRequest = new UpdateStayDurationRequest(m.getStayMinutes());
+                    updateStayDuration(tripId, m.getScheduleId(), updateDurationRequest, userId);
+                });
+
+        // 최종 결과 조회 및 반환
+        return getTripSchedules(tripId, dayNumber, userId);
     }
 }
