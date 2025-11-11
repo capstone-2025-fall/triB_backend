@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
+import triB.triB.schedule.dto.AddScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -128,5 +129,28 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("체류시간을 수정했습니다.", response);
+    }
+
+    @PostMapping
+    @Operation(
+            summary = "일정 추가",
+            description = "특정 날짜의 마지막 일정으로 새로운 장소를 추가합니다."
+    )
+    public ResponseEntity<ApiResponse<ScheduleItemResponse>> addSchedule(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 추가 요청", required = true)
+            @RequestBody @Valid AddScheduleRequest request,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        ScheduleItemResponse response = scheduleService.addScheduleToDay(
+                tripId,
+                request,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.created("일정을 추가했습니다.", response);
     }
 }
