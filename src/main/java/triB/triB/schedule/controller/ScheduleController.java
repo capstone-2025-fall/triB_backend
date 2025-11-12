@@ -211,8 +211,10 @@ public class ScheduleController {
 
     @PatchMapping("/accommodation")
     @Operation(
-            summary = "숙소 변경",
-            description = "숙소를 변경하고 출발/도착 시간을 재계산합니다."
+            summary = "숙소 변경 (레거시 API)",
+            description = "dayNumber 기반으로 해당 날짜의 숙소를 변경합니다. " +
+                    "새로운 일괄 수정 API(POST /api/v1/trips/{tripId}/schedules/batch-update)에서 " +
+                    "ModificationType.UPDATE_ACCOMMODATION을 사용하면 scheduleId 기반으로 더 정확한 숙소 변경이 가능합니다."
     )
     public ResponseEntity<ApiResponse<ScheduleItemResponse>> updateAccommodation(
             @Parameter(description = "여행 ID", required = true)

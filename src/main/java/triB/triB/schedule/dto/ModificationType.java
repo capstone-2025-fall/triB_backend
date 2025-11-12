@@ -17,5 +17,8 @@ public enum ModificationType {
     ADD,
 
     @Schema(description = "일정 삭제")
-    DELETE
+    DELETE,
+
+    @Schema(description = "숙소 변경 (기존 숙소만)")
+    UPDATE_ACCOMMODATION
 }

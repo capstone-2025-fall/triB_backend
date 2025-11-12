@@ -383,4 +383,141 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").exists());
     }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/batch-update - 숙소 변경 포함")
+    void batchUpdateSchedule_WithAccommodation() throws Exception {
+        // given
+        ScheduleModificationItem accommodationUpdate = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(100L)
+                .placeName("롯데호텔")
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .build();
+
+        BatchUpdateScheduleRequest request = BatchUpdateScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(accommodationUpdate))
+                .build();
+
+        // Mock response에 변경된 숙소 정보 포함
+        ScheduleItemResponse accommodationResponse = ScheduleItemResponse.builder()
+                .scheduleId(100L)
+                .displayName("롯데호텔")
+                .placeTag(PlaceTag.HOME)
+                .arrival(LocalDateTime.of(2025, 1, 1, 18, 0))
+                .departure(LocalDateTime.of(2025, 1, 2, 9, 0))
+                .travelTime("1시간")
+                .visitOrder(2)
+                .isVisit(false)
+                .build();
+
+        TripScheduleResponse mockResponse = TripScheduleResponse.builder()
+                .tripId(tripId)
+                .destination("Seoul")
+                .startDate(LocalDate.of(2025, 1, 1))
+                .endDate(LocalDate.of(2025, 1, 3))
+                .currentDay(1)
+                .schedules(Arrays.asList(scheduleItemResponse, accommodationResponse))
+                .build();
+
+        when(scheduleService.batchUpdateSchedule(eq(tripId), any(), eq(userId)))
+                .thenReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/batch-update", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("일정 변경사항을 저장했습니다."))
+                .andExpect(jsonPath("$.data.tripId").value(tripId))
+                .andExpect(jsonPath("$.data.schedules[?(@.scheduleId == 100)].displayName").value("롯데호텔"));
+
+        verify(scheduleService).batchUpdateSchedule(eq(tripId), any(BatchUpdateScheduleRequest.class), eq(userId));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/preview - 숙소 변경 미리보기")
+    void previewScheduleChanges_WithAccommodation() throws Exception {
+        // given
+        ScheduleModificationItem accommodationUpdate = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(100L)
+                .placeName("신라호텔")
+                .latitude(37.5555)
+                .longitude(126.9999)
+                .build();
+
+        PreviewScheduleRequest request = PreviewScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(accommodationUpdate))
+                .build();
+
+        // Mock response에 변경된 숙소 정보 포함
+        ScheduleItemResponse accommodationResponse = ScheduleItemResponse.builder()
+                .scheduleId(100L)
+                .displayName("신라호텔")
+                .placeTag(PlaceTag.HOME)
+                .arrival(LocalDateTime.of(2025, 1, 1, 18, 0))
+                .departure(LocalDateTime.of(2025, 1, 2, 9, 0))
+                .travelTime("1시간 15분")
+                .visitOrder(2)
+                .isVisit(false)
+                .build();
+
+        TripScheduleResponse mockResponse = TripScheduleResponse.builder()
+                .tripId(tripId)
+                .destination("Seoul")
+                .startDate(LocalDate.of(2025, 1, 1))
+                .endDate(LocalDate.of(2025, 1, 3))
+                .currentDay(1)
+                .schedules(Arrays.asList(scheduleItemResponse, accommodationResponse))
+                .build();
+
+        when(scheduleService.previewScheduleChanges(eq(tripId), any(), eq(userId)))
+                .thenReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/preview", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("일정 변경사항을 미리보기합니다."))
+                .andExpect(jsonPath("$.data.tripId").value(tripId))
+                .andExpect(jsonPath("$.data.schedules[?(@.scheduleId == 100)].displayName").value("신라호텔"));
+
+        verify(scheduleService).previewScheduleChanges(eq(tripId), any(PreviewScheduleRequest.class), eq(userId));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/trips/{tripId}/schedules/batch-update - HOME 아닌 일정 변경 시 실패")
+    void batchUpdateSchedule_AccommodationNotHome_BadRequest() throws Exception {
+        // given
+        ScheduleModificationItem accommodationUpdate = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(scheduleId) // TOURIST_SPOT 일정
+                .placeName("롯데호텔")
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .build();
+
+        BatchUpdateScheduleRequest request = BatchUpdateScheduleRequest.builder()
+                .dayNumber(1)
+                .modifications(Arrays.asList(accommodationUpdate))
+                .build();
+
+        when(scheduleService.batchUpdateSchedule(eq(tripId), any(), eq(userId)))
+                .thenThrow(new IllegalArgumentException("숙소(PlaceTag.HOME)만 변경할 수 있습니다."));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/trips/{tripId}/schedules/batch-update", tripId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("숙소(PlaceTag.HOME)만 변경할 수 있습니다."));
+    }
 }

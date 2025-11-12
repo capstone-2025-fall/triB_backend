@@ -12,6 +12,19 @@ import triB.triB.chat.entity.PlaceTag;
 
 import java.time.LocalTime;
 
+/**
+ * 일정 변경 항목
+ *
+ * <h3>각 변경 타입별 필요한 필드</h3>
+ * <ul>
+ *   <li><strong>REORDER:</strong> scheduleId, newVisitOrder</li>
+ *   <li><strong>UPDATE_STAY_DURATION:</strong> scheduleId, stayMinutes</li>
+ *   <li><strong>UPDATE_VISIT_TIME:</strong> scheduleId, newArrivalTime</li>
+ *   <li><strong>ADD:</strong> dayNumber, placeName, placeTag, latitude, longitude, stayMinutes</li>
+ *   <li><strong>DELETE:</strong> scheduleId</li>
+ *   <li><strong>UPDATE_ACCOMMODATION:</strong> scheduleId, placeName, latitude, longitude (기존 숙소만 변경 가능)</li>
+ * </ul>
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,8 +37,8 @@ public class ScheduleModificationItem {
     @NotNull(message = "변경 타입은 필수입니다.")
     private ModificationType modificationType;
 
-    // ===== REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE에 사용 =====
-    @Schema(description = "일정 ID (REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE용)", example = "1")
+    // ===== REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE, UPDATE_ACCOMMODATION에 사용 =====
+    @Schema(description = "일정 ID (REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE, UPDATE_ACCOMMODATION용)", example = "1")
     private Long scheduleId;
 
     // ===== REORDER에 사용 =====
@@ -47,15 +60,16 @@ public class ScheduleModificationItem {
     @Positive(message = "일차는 1 이상이어야 합니다.")
     private Integer dayNumber;
 
-    @Schema(description = "장소명 (ADD용)", example = "남산타워")
+    // ===== ADD, UPDATE_ACCOMMODATION에 사용 =====
+    @Schema(description = "장소명 (ADD, UPDATE_ACCOMMODATION용)", example = "남산타워")
     private String placeName;
 
     @Schema(description = "장소 태그 (ADD용)", example = "TOURIST_SPOT")
     private PlaceTag placeTag;
 
-    @Schema(description = "위도 (ADD용)", example = "37.5512")
+    @Schema(description = "위도 (ADD, UPDATE_ACCOMMODATION용)", example = "37.5512")
     private Double latitude;
 
-    @Schema(description = "경도 (ADD용)", example = "126.9882")
+    @Schema(description = "경도 (ADD, UPDATE_ACCOMMODATION용)", example = "126.9882")
     private Double longitude;
 }

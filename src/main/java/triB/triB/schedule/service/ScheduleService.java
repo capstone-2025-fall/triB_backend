@@ -462,11 +462,22 @@ public class ScheduleService {
     }
 
     /**
-     * 숙소 변경
+     * 특정 날짜(dayNumber)의 숙소를 변경합니다 (레거시 메서드).
+     *
+     * <p>해당 날짜에서 PlaceTag.HOME인 일정을 찾아 위치 정보를 업데이트하고,
+     * 이전/다음 일정과의 이동시간을 재계산합니다.
+     *
+     * <p><strong>새로운 방식:</strong> scheduleId 기반 숙소 변경은
+     * {@link #updateAccommodationByScheduleId(Long, String, Double, Double)} 메서드를 사용하세요.
+     * 일괄 수정 API를 통해 다른 변경사항과 함께 적용할 수 있습니다.
+     *
      * @param tripId 여행 ID
-     * @param request 숙소 변경 요청 DTO
+     * @param request 숙소 변경 요청 (dayNumber, placeName, latitude, longitude)
      * @param userId 사용자 ID
      * @return 변경된 숙소 정보
+     * @throws IllegalArgumentException 숙소를 찾을 수 없는 경우
+     * @see #updateAccommodationByScheduleId(Long, String, Double, Double)
+     * @see #batchUpdateSchedule(Long, BatchUpdateScheduleRequest, Long)
      */
     @Transactional
     public ScheduleItemResponse updateAccommodation(Long tripId, UpdateAccommodationRequest request, Long userId) {
@@ -562,6 +573,137 @@ public class ScheduleService {
 
         // 응답 DTO 생성 및 반환
         return mapToScheduleItemResponse(accommodation);
+    }
+
+    /**
+     * scheduleId로 기존 숙소를 새로운 위치의 숙소로 변경
+     *
+     * <p>일괄 수정 및 미리보기 API에서 사용되는 내부 메서드입니다.
+     * PlaceTag.HOME인 일정만 변경할 수 있으며, 일반 일정을 숙소로 변경할 수 없습니다.
+     *
+     * @param scheduleId 변경할 숙소 일정의 ID
+     * @param placeName 새로운 숙소 이름
+     * @param latitude 새로운 숙소 위도
+     * @param longitude 새로운 숙소 경도
+     * @throws IllegalArgumentException 해당 scheduleId가 존재하지 않거나 PlaceTag.HOME이 아닌 경우
+     */
+    private void updateAccommodationByScheduleId(
+            Long scheduleId,
+            String placeName,
+            Double latitude,
+            Double longitude
+    ) {
+        // Schedule 조회 및 PlaceTag.HOME 검증
+        Schedule accommodation = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 일정을 찾을 수 없습니다."));
+
+        if (accommodation.getPlaceTag() != PlaceTag.HOME) {
+            throw new IllegalArgumentException("숙소(PlaceTag.HOME)만 변경할 수 있습니다.");
+        }
+
+        // 기존 체류시간 저장 (arrival과 departure 간격)
+        Duration existingStayDuration = Duration.between(accommodation.getArrival(), accommodation.getDeparture());
+
+        // 숙소 정보 업데이트
+        accommodation.setPlaceName(placeName);
+        accommodation.setLatitude(latitude);
+        accommodation.setLongitude(longitude);
+        // PlaceTag는 이미 HOME이므로 변경 불필요
+
+        // Trip의 travelMode 조회
+        Long tripId = accommodation.getTrip().getTripId();
+        Integer dayNumber = accommodation.getDayNumber();
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+        TravelMode travelMode = trip.getTravelMode() != null ? trip.getTravelMode() : TravelMode.DRIVE;
+
+        // 해당 날짜의 모든 일정 조회 (visitOrder 순)
+        List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber)
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .collect(Collectors.toList());
+
+        // 이전 일정 → 숙소 이동시간 재계산
+        Schedule previousSchedule = null;
+        for (int i = 0; i < daySchedules.size(); i++) {
+            if (daySchedules.get(i).getScheduleId().equals(accommodation.getScheduleId())) {
+                if (i > 0) {
+                    previousSchedule = daySchedules.get(i - 1);
+                }
+                break;
+            }
+        }
+
+        if (previousSchedule != null && previousSchedule.getPlaceTag() != PlaceTag.HOME) {
+            // 이전 일정에서 숙소까지의 이동시간 계산
+            Integer travelTimeMinutes = routesApiService.calculateTravelTime(
+                    previousSchedule.getLatitude(),
+                    previousSchedule.getLongitude(),
+                    accommodation.getLatitude(),
+                    accommodation.getLongitude(),
+                    travelMode
+            );
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelTimeMinutes);
+            previousSchedule.setTravelTime(travelTimeText);
+
+            // 숙소 arrival 시간 재계산
+            LocalDateTime newArrival = previousSchedule.getDeparture().plusMinutes(travelTimeMinutes);
+            accommodation.setArrival(newArrival);
+            accommodation.setDeparture(newArrival.plus(existingStayDuration));
+        }
+
+        // 숙소 → 다음 일정 이동시간 재계산
+        // 다음 일정은 같은 날짜의 다음 일정 또는 다음날 첫 일정일 수 있음
+        Schedule nextSchedule = null;
+
+        // 같은 날짜의 다음 일정 찾기
+        for (int i = 0; i < daySchedules.size(); i++) {
+            if (daySchedules.get(i).getScheduleId().equals(accommodation.getScheduleId())) {
+                if (i < daySchedules.size() - 1) {
+                    nextSchedule = daySchedules.get(i + 1);
+                }
+                break;
+            }
+        }
+
+        // 같은 날짜에 다음 일정이 없으면 다음날 첫 일정 조회
+        if (nextSchedule == null) {
+            List<Schedule> nextDaySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber + 1)
+                    .stream()
+                    .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                    .collect(Collectors.toList());
+
+            if (!nextDaySchedules.isEmpty()) {
+                nextSchedule = nextDaySchedules.get(0);
+            }
+        }
+
+        if (nextSchedule != null) {
+            // 숙소에서 다음 일정까지의 이동시간 계산
+            Integer travelTimeMinutes = routesApiService.calculateTravelTime(
+                    accommodation.getLatitude(),
+                    accommodation.getLongitude(),
+                    nextSchedule.getLatitude(),
+                    nextSchedule.getLongitude(),
+                    travelMode
+            );
+            String travelTimeText = routesApiService.formatMinutesToReadable(travelTimeMinutes);
+            accommodation.setTravelTime(travelTimeText);
+
+            // 다음 일정의 arrival 시간 재계산
+            LocalDateTime nextArrival = accommodation.getDeparture().plusMinutes(travelTimeMinutes);
+            nextSchedule.setArrival(nextArrival);
+
+            // 다음 일정이 다음날이면 다음날 전체 departure 재계산
+            if (!nextSchedule.getDayNumber().equals(dayNumber)) {
+                recalculateDepartureTimes(tripId, nextSchedule.getDayNumber());
+            }
+        }
+
+        // 현재 날짜의 departure 시간 재계산
+        recalculateDepartureTimes(tripId, dayNumber);
+
+        // JPA dirty checking으로 자동 업데이트
     }
 
     /**
@@ -780,7 +922,7 @@ public class ScheduleService {
             Long userId
     ) {
         // 변경사항을 타입별로 순서대로 적용
-        // 순서: DELETE → ADD → REORDER → UPDATE_VISIT_TIME → UPDATE_STAY_DURATION
+        // 순서: DELETE → ADD → REORDER → UPDATE_ACCOMMODATION → UPDATE_VISIT_TIME → UPDATE_STAY_DURATION
 
         // 1. DELETE 적용
         modifications.stream()
@@ -812,7 +954,19 @@ public class ScheduleService {
                     reorderSchedule(tripId, m.getScheduleId(), reorderRequest, userId);
                 });
 
-        // 4. UPDATE_VISIT_TIME 적용
+        // 4. UPDATE_ACCOMMODATION 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.UPDATE_ACCOMMODATION)
+                .forEach(m -> {
+                    updateAccommodationByScheduleId(
+                            m.getScheduleId(),
+                            m.getPlaceName(),
+                            m.getLatitude(),
+                            m.getLongitude()
+                    );
+                });
+
+        // 5. UPDATE_VISIT_TIME 적용
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.UPDATE_VISIT_TIME)
                 .forEach(m -> {
@@ -820,7 +974,7 @@ public class ScheduleService {
                     updateVisitTime(tripId, m.getScheduleId(), updateTimeRequest, userId);
                 });
 
-        // 5. UPDATE_STAY_DURATION 적용
+        // 6. UPDATE_STAY_DURATION 적용
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.UPDATE_STAY_DURATION)
                 .forEach(m -> {

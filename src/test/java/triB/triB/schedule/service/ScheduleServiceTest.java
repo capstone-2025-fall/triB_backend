@@ -524,4 +524,328 @@ class ScheduleServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("해당 날짜에 숙소를 찾을 수 없습니다");
     }
+
+    @Test
+    @DisplayName("scheduleId로 숙소 변경 성공")
+    void updateAccommodationByScheduleId_Success() {
+        // given
+        Schedule touristSpot = Schedule.builder()
+                .scheduleId(1L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(1)
+                .placeName("경복궁")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5788)
+                .longitude(126.9770)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 11, 0))
+                .travelTime("1시간")
+                .build();
+
+        Schedule accommodation = Schedule.builder()
+                .scheduleId(100L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(2)
+                .placeName("명동호텔")
+                .placeTag(PlaceTag.HOME)
+                .latitude(37.5600)
+                .longitude(126.9700)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 12, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 22, 0))
+                .travelTime("1시간 30분")
+                .build();
+
+        Schedule nextDaySchedule = Schedule.builder()
+                .scheduleId(2L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(2)
+                .visitOrder(1)
+                .placeName("남산타워")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5512)
+                .longitude(126.9882)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 2, 9, 0))
+                .departure(LocalDateTime.of(2025, 1, 2, 10, 0))
+                .travelTime(null)
+                .build();
+
+        List<Schedule> daySchedules = Arrays.asList(touristSpot, accommodation);
+        List<Schedule> nextDaySchedules = Arrays.asList(nextDaySchedule);
+
+        when(scheduleRepository.findById(100L)).thenReturn(Optional.of(accommodation));
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 1)).thenReturn(daySchedules);
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 2)).thenReturn(nextDaySchedules);
+        when(routesApiService.calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), any()))
+                .thenReturn(50) // 경복궁 → 강남호텔: 50분
+                .thenReturn(40); // 강남호텔 → 남산타워: 40분
+        when(routesApiService.formatMinutesToReadable(50)).thenReturn("50분");
+        when(routesApiService.formatMinutesToReadable(40)).thenReturn("40분");
+
+        // when
+        PreviewScheduleRequest request = new PreviewScheduleRequest();
+        request.setDayNumber(1);
+        ScheduleModificationItem modification = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(100L)
+                .placeName("강남호텔")
+                .latitude(37.4979)
+                .longitude(127.0276)
+                .build();
+        request.setModifications(Arrays.asList(modification));
+
+        // 미리보기 API 호출
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(testRoom));
+
+        TripScheduleResponse response = scheduleService.previewScheduleChanges(tripId, request, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(accommodation.getPlaceName()).isEqualTo("강남호텔");
+        assertThat(accommodation.getLatitude()).isEqualTo(37.4979);
+        assertThat(accommodation.getLongitude()).isEqualTo(127.0276);
+        assertThat(accommodation.getPlaceTag()).isEqualTo(PlaceTag.HOME);
+
+        verify(routesApiService, atLeastOnce()).calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), eq(TravelMode.DRIVE));
+    }
+
+    @Test
+    @DisplayName("scheduleId로 숙소 변경 실패 - 존재하지 않는 scheduleId")
+    void updateAccommodationByScheduleId_NotFound() {
+        // given
+        Long nonExistentId = 99999L;
+        when(scheduleRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+
+        // when & then
+        PreviewScheduleRequest request = new PreviewScheduleRequest();
+        request.setDayNumber(1);
+        ScheduleModificationItem modification = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(nonExistentId)
+                .placeName("새로운 숙소")
+                .latitude(37.5650)
+                .longitude(126.9750)
+                .build();
+        request.setModifications(Arrays.asList(modification));
+
+        assertThatThrownBy(() -> scheduleService.previewScheduleChanges(tripId, request, userId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("해당 일정을 찾을 수 없습니다");
+    }
+
+    @Test
+    @DisplayName("scheduleId로 숙소 변경 실패 - PlaceTag.HOME이 아닌 일정")
+    void updateAccommodationByScheduleId_NotHome() {
+        // given
+        Schedule touristSpot = Schedule.builder()
+                .scheduleId(1L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(1)
+                .placeName("경복궁")
+                .placeTag(PlaceTag.TOURIST_SPOT) // HOME이 아님
+                .latitude(37.5788)
+                .longitude(126.9770)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 11, 0))
+                .travelTime(null)
+                .build();
+
+        when(scheduleRepository.findById(1L)).thenReturn(Optional.of(touristSpot));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+
+        // when & then
+        PreviewScheduleRequest request = new PreviewScheduleRequest();
+        request.setDayNumber(1);
+        ScheduleModificationItem modification = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(1L)
+                .placeName("새로운 숙소")
+                .latitude(37.5650)
+                .longitude(126.9750)
+                .build();
+        request.setModifications(Arrays.asList(modification));
+
+        assertThatThrownBy(() -> scheduleService.previewScheduleChanges(tripId, request, userId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("숙소(PlaceTag.HOME)만 변경할 수 있습니다");
+    }
+
+    @Test
+    @DisplayName("일괄 수정 - 숙소 변경 포함")
+    void batchUpdate_WithAccommodationChange() {
+        // given
+        Schedule schedule1 = Schedule.builder()
+                .scheduleId(1L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(1)
+                .placeName("경복궁")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5788)
+                .longitude(126.9770)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 11, 0))
+                .travelTime("1시간")
+                .build();
+
+        Schedule accommodation = Schedule.builder()
+                .scheduleId(2L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(2)
+                .placeName("명동호텔")
+                .placeTag(PlaceTag.HOME)
+                .latitude(37.5600)
+                .longitude(126.9700)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 12, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 22, 0))
+                .travelTime(null)
+                .build();
+
+        Schedule schedule3 = Schedule.builder()
+                .scheduleId(3L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(3)
+                .placeName("인사동")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5730)
+                .longitude(126.9850)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 13, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 14, 0))
+                .travelTime(null)
+                .build();
+
+        List<Schedule> daySchedules = Arrays.asList(schedule1, accommodation, schedule3);
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(testRoom));
+        when(scheduleRepository.findById(2L)).thenReturn(Optional.of(accommodation));
+        when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule1));
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 1)).thenReturn(daySchedules);
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 2)).thenReturn(Arrays.asList());
+        when(routesApiService.calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), any()))
+                .thenReturn(30);
+        when(routesApiService.formatMinutesToReadable(anyInt())).thenReturn("30분");
+
+        // when
+        BatchUpdateScheduleRequest request = new BatchUpdateScheduleRequest();
+        request.setDayNumber(1);
+
+        ScheduleModificationItem reorder = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.REORDER)
+                .scheduleId(1L)
+                .newVisitOrder(2)
+                .build();
+
+        ScheduleModificationItem updateAccommodation = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(2L)
+                .placeName("이태원호텔")
+                .latitude(37.5345)
+                .longitude(126.9949)
+                .build();
+
+        ScheduleModificationItem updateDuration = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_STAY_DURATION)
+                .scheduleId(1L)
+                .stayMinutes(90)
+                .build();
+
+        request.setModifications(Arrays.asList(reorder, updateAccommodation, updateDuration));
+
+        TripScheduleResponse response = scheduleService.batchUpdateSchedule(tripId, request, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(accommodation.getPlaceName()).isEqualTo("이태원호텔");
+        assertThat(accommodation.getLatitude()).isEqualTo(37.5345);
+        assertThat(accommodation.getLongitude()).isEqualTo(126.9949);
+
+        verify(routesApiService, atLeastOnce()).calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), eq(TravelMode.DRIVE));
+    }
+
+    @Test
+    @DisplayName("미리보기 - 숙소 변경 포함")
+    void preview_WithAccommodationChange() {
+        // given
+        Schedule accommodation = Schedule.builder()
+                .scheduleId(100L)
+                .tripId(tripId)
+                .trip(testTrip)
+                .dayNumber(1)
+                .visitOrder(2)
+                .placeName("명동호텔")
+                .placeTag(PlaceTag.HOME)
+                .latitude(37.5600)
+                .longitude(126.9700)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 12, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 22, 0))
+                .travelTime(null)
+                .build();
+
+        String originalPlaceName = accommodation.getPlaceName();
+        Double originalLatitude = accommodation.getLatitude();
+        Double originalLongitude = accommodation.getLongitude();
+
+        List<Schedule> daySchedules = Arrays.asList(testSchedule1, accommodation);
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(testRoom));
+        when(scheduleRepository.findById(100L)).thenReturn(Optional.of(accommodation));
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 1)).thenReturn(daySchedules);
+        when(scheduleRepository.findByTripIdAndDayNumber(tripId, 2)).thenReturn(Arrays.asList());
+        when(routesApiService.calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), any()))
+                .thenReturn(40);
+        when(routesApiService.formatMinutesToReadable(anyInt())).thenReturn("40분");
+
+        // when
+        PreviewScheduleRequest request = new PreviewScheduleRequest();
+        request.setDayNumber(1);
+
+        ScheduleModificationItem modification = ScheduleModificationItem.builder()
+                .modificationType(ModificationType.UPDATE_ACCOMMODATION)
+                .scheduleId(100L)
+                .placeName("신라호텔")
+                .latitude(37.5555)
+                .longitude(126.9999)
+                .build();
+
+        request.setModifications(Arrays.asList(modification));
+
+        TripScheduleResponse response = scheduleService.previewScheduleChanges(tripId, request, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        // 미리보기에서는 값이 변경되었지만 트랜잭션 롤백으로 인해 DB에 저장되지 않음을 확인
+        assertThat(accommodation.getPlaceName()).isEqualTo("신라호텔");
+        assertThat(accommodation.getLatitude()).isEqualTo(37.5555);
+        assertThat(accommodation.getLongitude()).isEqualTo(126.9999);
+
+        verify(routesApiService, atLeastOnce()).calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), eq(TravelMode.DRIVE));
+    }
 }
