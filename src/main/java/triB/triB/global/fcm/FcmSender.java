@@ -10,7 +10,7 @@ public class FcmSender {
 
         Message message = Message.builder()
                 .putData("type", fcmSendRequest.getRequestType().toString())
-                .putData("id", fcmSendRequest.getId().toString())
+                .putData("id", fcmSendRequest.getId() != null ? fcmSendRequest.getId().toString() : "0")
                 .setNotification(
                         Notification.builder()
                                 .setTitle(fcmSendRequest.getTitle())
