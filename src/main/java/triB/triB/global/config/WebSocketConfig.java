@@ -8,7 +8,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import triB.triB.chat.stomp.StompHandler;
+import triB.triB.chat.stomp.StompInterceptor;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -16,7 +16,7 @@ import triB.triB.chat.stomp.StompHandler;
 @Slf4j
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final StompHandler stompHandler;
+    private final StompInterceptor stompInterceptor;
 
     // HandShake와 통신할 EndPoint 지정
     @Override
@@ -38,7 +38,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     // 인터셉터 등록
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(stompHandler);
+        registration.interceptors(stompInterceptor);
     }
-
 }

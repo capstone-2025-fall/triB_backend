@@ -27,16 +27,28 @@ public class SessionDisconnectEventListener {
         UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
         Long userId = userPrincipal.getUserId();
 
-        accessor.getSessionAttributes().forEach((k, v) -> {
-            String keyStr = k.toString();
-            if (keyStr.startsWith("subscription:") && v instanceof Long) {
-                Long roomId = (Long) v;
-                try {
-                    socketService.saveLastReadMessage(userId, roomId);
-                } catch (Exception e) {
-                    log.error("마지막 읽은 메세지 저장 실패: userId={}, roomId={}, error={}", userId, roomId,  e.getMessage());
+        // 남아있는 구독 정보가 있는지 확인
+        boolean hasSubscription = accessor.getSessionAttributes().keySet().stream()
+                .anyMatch(key -> key.toString().startsWith("subscription:"));
+
+        if (hasSubscription) {
+            log.info("DISCONNECT - 남아있는 구독 정보 처리: userId={}", userId);
+            accessor.getSessionAttributes().forEach((k, v) -> {
+                String keyStr = k.toString();
+                if (keyStr.startsWith("subscription:") && v instanceof Long) {
+                    Long roomId = (Long) v;
+                    try {
+                        socketService.saveLastReadMessage(userId, roomId);
+                    } catch (Exception e) {
+                        log.error("마지막 읽은 메세지 저장 실패: userId={}, roomId={}, error={}", userId, roomId,  e.getMessage());
+                    }
                 }
-            }
-        });
+            });
+
+            // 구독 정보 제거 (메모리 정리)
+            accessor.getSessionAttributes().entrySet().removeIf(entry ->
+                    entry.getKey().toString().startsWith("subscription:")
+            );
+        }
     }
 }

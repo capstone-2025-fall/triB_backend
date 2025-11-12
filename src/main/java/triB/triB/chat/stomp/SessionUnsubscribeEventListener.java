@@ -21,8 +21,9 @@ public class SessionUnsubscribeEventListener {
     public void handleSessionUnsubscribe(SessionUnsubscribeEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         Authentication auth = (Authentication) accessor.getUser();
-        if (auth == null)
+        if (auth == null) {
             return;
+        }
         UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
         Long userId = userPrincipal.getUserId();
 
@@ -32,10 +33,14 @@ public class SessionUnsubscribeEventListener {
         if (roomId != null){
             try {
                 socketService.saveLastReadMessage(userId, roomId);
+
+                // 읽음 처리가 완료되면 구독 정보 제거
+                accessor.getSessionAttributes().remove("subscription:" + subscriptionId);
+                log.info("구독 정보 제거 완료: subscription:{}", subscriptionId);
             } catch (Exception e) {
                 log.error("마지막 읽은 메시지 저장 실패: userId={}, roomId={}", userId, roomId, e);
-
             }
-        }
+        } else
+            throw new IllegalArgumentException("구독 정보가 없습니다.");
     }
 }
