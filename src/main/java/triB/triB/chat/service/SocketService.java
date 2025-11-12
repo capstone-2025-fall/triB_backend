@@ -23,6 +23,8 @@ import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
 import triB.triB.friendship.dto.UserResponse;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.fcm.FcmSendRequest;
 import triB.triB.global.fcm.FcmSender;
 import triB.triB.global.fcm.RequestType;
@@ -335,29 +337,28 @@ public class SocketService {
 //        List<Token> tokens = users.stream()
 //                .filter(user -> !Objects.equals(user.getUserId(), userId))
 //                .filter(user -> !getOnlineUsersInRoom(roomId, user.getUserId()))
-//                .flatMap(user -> tokenRepository.findAllByUser_UserId(user.getUserId()).stream())
+//                .flatMap(user -> tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON).stream())
 //                .filter(Objects::nonNull)
 //                .toList();
 //
-//        User user = message.getUser();
-//        String roomName = room.getRoomName();
-//        String content = user.getNickname() + "\n" +
-//                (message.getMessageType().equals(MessageType.TEXT) ?
-//                        message.getContent()
-//                        : messagePlaceDetailRepository.findByMessage_MessageId(message.getMessageId()).getDisplayName());
-//        String image = user.getPhotoUrl();
+//        if (!tokens.isEmpty()) {
+//            User user = message.getUser();
+//            String roomName = room.getRoomName();
+//            String content = user.getNickname() + "\n" + message.getContent();
+//            String image = user.getPhotoUrl();
 //
-//        for (Token t : tokens) {
-//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                    .requestType(RequestType.MESSAGE)
-//                    .id(0L)
-//                    .title(roomName)
-//                    .content(content)
-//                    .image(image)
-//                    .token(t.getToken())
-//                    .build();
+//            for (Token t : tokens) {
+//                FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+//                        .requestType(RequestType.MESSAGE)
+//                        .id(0L)
+//                        .title(roomName)
+//                        .content(content)
+//                        .image(image)
+//                        .token(t.getToken())
+//                        .build();
 //
-//            fcmSender.sendPushNotification(fcmSendRequest);
+//                fcmSender.sendPushNotification(fcmSendRequest);
+//            }
 //        }
     }
 

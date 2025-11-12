@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.TokenRepository;
@@ -120,7 +121,6 @@ public class FriendshipService {
             friendshipRepository.delete(f2);
         }
 
-        // todo 에러 수정
         if (friendshipRepository.existsByRequester_UserIdAndAddressee_UserId(userId1, userId2)) {
             throw new CustomException(ErrorCode.CONFLICT_FRIENDSHIP_TO_OTHER);
         }
@@ -137,23 +137,12 @@ public class FriendshipService {
 
         friendshipRepository.save(friendship);
 
-//        // todo FCM 메세지 알림 보내기 userId2에게 알람이 ON인 유저만
-//        List<Token> token = tokenRepository.findAllByUser_UserId(userId2);
-//
-//        if (token.isEmpty()) {
-//            throw new CustomException(ErrorCode.NO_FCM_TOKEN);
-//        }
+//        //FCM 메세지 알림 보내기
+//        List<Token> token = tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(userId2, IsAlarm.ON);
 //
 //        for (Token t : token) {
-//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                    .requestType(RequestType.FRIEND_REQUEST)
-//                    .id(0L)
-//                    .title("TriB")
-//                    .content(requester.getNickname()+" 님이 나에게 친구를 신청했어요!")
-//                    .image(tribImage)
-//                    .token(t.getToken())
-//                    .build();
-//
+//            FcmSendRequest fcmSendRequest
+//                    = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", t.getToken());
 //            fcmSender.sendPushNotification(fcmSendRequest);
 //        }
     }
@@ -196,23 +185,12 @@ public class FriendshipService {
         friendRepository.save(friend1);
         friendRepository.save(friend2);
 
-//        // todo FCM 메세지 알림 보내기 friendship.getRequester 그리고 isAlarm == ON인 유저만
-//        List<Token> token = tokenRepository.findAllByUser_UserId(friendship.getRequester().getUserId());
-//
-//        if (token.isEmpty()) {
-//            throw new CustomException(ErrorCode.NO_FCM_TOKEN);
-//        }
+//        // FCM 메세지 알림 보내기
+//        List<Token> token = tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
 //
 //        for (Token t : token) {
-//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                    .requestType(RequestType.FRIEND_ACCEPTED)
-//                    .id(0L)
-//                    .title("TriB")
-//                    .content(friendship.getRequester().getNickname()+" 님과 친구가 되었어요!")
-//                    .image(tribImage)
-//                    .token(t.getToken())
-//                    .build();
-//
+//            FcmSendRequest fcmSendRequest =
+//                    sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getNickname()+" 님과 친구가 되었어요!", t.getToken());
 //            fcmSender.sendPushNotification(fcmSendRequest);
 //        }
     }
@@ -228,5 +206,15 @@ public class FriendshipService {
 
         friendship.setFriendshipStatus(FriendshipStatus.REJECTED);
         friendshipRepository.save(friendship);
+    }
+
+    private FcmSendRequest sendPushToToken(RequestType requestType, String content, String token) {
+        return FcmSendRequest.builder()
+                .requestType(requestType)
+                .title("TriB")
+                .content(content)
+                .image(tribImage)
+                .token(token)
+                .build();
     }
 }
