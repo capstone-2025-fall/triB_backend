@@ -24,13 +24,18 @@ import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostLikeResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
 import triB.triB.community.entity.Hashtag;
+import triB.triB.community.entity.Post;
+import triB.triB.community.entity.PostType;
 import triB.triB.community.entity.TagType;
 import triB.triB.community.repository.HashtagRepository;
+import triB.triB.community.repository.PostRepository;
 import triB.triB.community.service.HotPostScheduler;
 import triB.triB.community.service.PostLikeService;
 import triB.triB.community.service.PostService;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
+import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.service.ScheduleService;
 
 import java.util.stream.Collectors;
 
@@ -47,6 +52,8 @@ public class PostController {
     private final PostLikeService postLikeService;
     private final HashtagRepository hashtagRepository;
     private final HotPostScheduler hotPostScheduler;
+    private final PostRepository postRepository;
+    private final ScheduleService scheduleService;
 
     @Operation(summary = "일정 공유 게시글 작성",
                description = "TRIP_SHARE 타입 게시글을 작성합니다. 여행 정보와 이미지를 함께 업로드할 수 있습니다.")
@@ -185,5 +192,35 @@ public class PostController {
 
         String message = isLiked ? "게시글에 좋아요를 추가했습니다." : "게시글 좋아요를 취소했습니다.";
         return ApiResponse.ok(message, response);
+    }
+
+    @Operation(summary = "일정 공유 게시글의 일정 조회",
+               description = "TRIP_SHARE 타입 게시글의 특정 날짜 일정을 조회합니다. 누구나 조회 가능합니다.")
+    @GetMapping("/{postId}/schedules")
+    public ResponseEntity<ApiResponse<TripScheduleResponse>> getSchedulesFromPost(
+            @PathVariable Long postId,
+            @RequestParam(required = false, defaultValue = "1") Integer dayNumber) {
+
+        // Post 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        // TRIP_SHARE 타입인지 검증
+        if (post.getPostType() != PostType.TRIP_SHARE) {
+            throw new IllegalArgumentException("일정 공유 게시글만 일정을 조회할 수 있습니다.");
+        }
+
+        // tripId 확인
+        if (post.getTripId() == null) {
+            throw new IllegalArgumentException("게시글에 연결된 여행 정보가 없습니다.");
+        }
+
+        // 일정 조회 (권한 검증 없이 공개 조회)
+        TripScheduleResponse response = scheduleService.getTripSchedulesPublic(
+                post.getTripId(),
+                dayNumber
+        );
+
+        return ApiResponse.ok("일정을 조회했습니다.", response);
     }
 }
