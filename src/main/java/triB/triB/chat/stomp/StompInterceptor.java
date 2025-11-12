@@ -8,7 +8,6 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,7 +16,6 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
-import triB.triB.chat.repository.MessageRepository;
 import triB.triB.global.security.JwtProvider;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.room.repository.UserRoomRepository;
@@ -25,7 +23,7 @@ import triB.triB.room.repository.UserRoomRepository;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class StompHandler implements ChannelInterceptor {
+public class StompInterceptor implements ChannelInterceptor {
 
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
@@ -127,17 +125,23 @@ public class StompHandler implements ChannelInterceptor {
                 Authentication auth = (Authentication) accessor.getUser();
                 if (auth == null)
                     throw new BadCredentialsException("인증 정보가 없습니다.");
+
                 UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
                 Long userId = userPrincipal.getUserId();
 
                 String subscriptionId = accessor.getSubscriptionId();
-                Long roomId = (Long) accessor.getSessionAttributes().get("subscription:"+subscriptionId);
-                log.debug("roomId={}", roomId);
-                if (roomId == null)
-                    throw new IllegalArgumentException("구독 정보가 없습니다.");
+                Long roomId = (Long) accessor.getSessionAttributes().get("subscription:" + subscriptionId);
 
-                accessor.getSessionAttributes().remove("subscription:"+subscriptionId);
-                log.debug("채팅방 구독 해제: userId={}, roomId={}", userId, roomId);
+                if (roomId != null) {
+                    boolean hasAccess = userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId);
+                    if (!hasAccess) {
+                        log.error("채팅방 구독 해제 권한 없음. userId={}, roomId={}", userId, roomId);
+                        throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
+                    }
+                    log.debug("UNSUBSCRIBE 권한 검증 완료: userId={}, roomId={}", userId, roomId);
+                } else {
+                    log.warn("UNSUBSCRIBE 시 roomId가 없음: subscriptionId={}", subscriptionId);
+                }
             }
             // 앱 종료시 웹소켓 연결 종료
             else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
