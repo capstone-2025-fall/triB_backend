@@ -101,6 +101,41 @@ public class ScheduleService {
     }
 
     /**
+     * 특정 여행의 특정 날짜 일정 조회 (공개 - 권한 검증 없음)
+     * 커뮤니티 게시글에서 공유된 일정을 조회할 때 사용
+     */
+    public TripScheduleResponse getTripSchedulesPublic(Long tripId, Integer dayNumber) {
+        // dayNumber가 null이면 기본값 1 사용
+        Integer targetDayNumber = (dayNumber != null) ? dayNumber : 1;
+
+        // Trip 조회
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+        // Room 조회 (startDate, endDate 획득)
+        Room room = roomRepository.findById(trip.getRoomId())
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+        // 특정 날짜의 일정 조회
+        List<Schedule> schedules = scheduleRepository.findByTripIdAndDayNumber(tripId, targetDayNumber);
+
+        // Schedule 리스트를 ScheduleItemResponse로 매핑
+        List<ScheduleItemResponse> scheduleItems = schedules.stream()
+                .map(this::mapToScheduleItemResponse)
+                .collect(Collectors.toList());
+
+        // TripScheduleResponse 생성 및 반환
+        return TripScheduleResponse.builder()
+                .tripId(trip.getTripId())
+                .destination(trip.getDestination())
+                .startDate(room.getStartDate())
+                .endDate(room.getEndDate())
+                .currentDay(targetDayNumber)
+                .schedules(scheduleItems)
+                .build();
+    }
+
+    /**
      * 일정의 방문 완료 상태 변경
      */
     @Transactional
