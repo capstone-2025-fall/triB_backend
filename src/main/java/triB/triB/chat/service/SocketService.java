@@ -4,6 +4,8 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.user.SimpSubscription;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.IsAlarm;
@@ -21,16 +23,26 @@ import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
 import triB.triB.friendship.dto.UserResponse;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.fcm.FcmSendRequest;
 import triB.triB.global.fcm.FcmSender;
 import triB.triB.global.fcm.RequestType;
+import triB.triB.global.security.UserPrincipal;
 import triB.triB.room.entity.Room;
+import triB.triB.room.entity.RoomReadState;
+import triB.triB.room.entity.RoomReadStateId;
 import triB.triB.room.entity.UserRoom;
+import triB.triB.room.repository.RoomReadStateRepository;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +58,8 @@ public class SocketService {
     private final MessagePlaceDetailRepository messagePlaceDetailRepository;
     private final TokenRepository tokenRepository;
     private final FcmSender fcmSender;
+    private final SimpUserRegistry simpUserRegistry;
+    private final RoomReadStateRepository roomReadStateRepository;
 
     // 메세지 전송
     @Transactional
@@ -65,8 +79,7 @@ public class SocketService {
                 .build();
         messageRepository.save(message);
 
-        sendMessagePushNotification(roomId, message);
-        // todo 확인해야할점: 지금 이 채팅방을 구독하고 있는 사람들에게는 메세지를 보낼필요가없음. 이 방안에 들어있지만 안 구독하고있는 사람에게 알림을 보내야됨
+        sendMessagePushNotification(userId, roomId, message);
 
         return MessageResponse.builder()
                 .actionType(ActionType.NEW_MESSAGE)
@@ -117,7 +130,7 @@ public class SocketService {
         message.setContent(messagePlaceDetail.getDisplayName());
         messageRepository.save(message);
 
-        sendMessagePushNotification(roomId, message);
+        sendMessagePushNotification(userId, roomId, message);
 
         return MessageResponse.builder()
                 .actionType(ActionType.NEW_MAP_MESSAGE)
@@ -283,44 +296,86 @@ public class SocketService {
                 .createdAt(null)
                 .build();
     }
-//   //todo 채팅방 구독상태인가
-//    private boolean isUserConnected(Room room, Long userId) {
-//
-//    }
-//
-    private void sendMessagePushNotification(Long roomId, Message message) throws FirebaseMessagingException {
-        List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(roomId, IsAlarm.ON);
-        log.info("message push notification send");
 
+    public void saveLastReadMessage(Long userId, Long roomId) {
+        Long messageId = messageRepository.findLastReadMessageIdByRoom_RoomId(roomId);
+        if (messageId == null) {
+            return;
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        RoomReadState r = roomReadStateRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
+        // 만약에 이미 읽은 기록이 있다면 업데이트 없다면 생성
+        if (r == null) {
+            log.debug("새로운 읽음 상태 저장");
+            RoomReadStateId id = new RoomReadStateId(userId, roomId);
+            RoomReadState roomReadState = RoomReadState.builder()
+                    .id(id)
+                    .user(user)
+                    .room(room)
+                    .lastReadMessageId(messageId)
+                    .build();
+            roomReadStateRepository.save(roomReadState);
+        } else {
+            log.debug("읽음 상태 업데이트");
+            r.setLastReadMessageId(messageId);
+            roomReadStateRepository.save(r);
+        }
+        log.debug("마지막 읽은 메세지 저장 완료: userId={}, roomId={}, messageId={}", userId, roomId, messageId);
+    }
+
+
+    private void sendMessagePushNotification(Long userId, Long roomId, Message message) throws FirebaseMessagingException {
+//        List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(roomId, IsAlarm.ON);
+//        log.info("message push notification send");
 //        Room room = roomRepository.findById(roomId)
 //                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
 //
 //        List<Token> tokens = users.stream()
-//                .filter(user -> !isUserConnected(room, user.getUserId()))
-//                .map(Token::getUser)
-//                .filter(token -> token != null)
-//                .;
+//                .filter(user -> !Objects.equals(user.getUserId(), userId))
+//                .filter(user -> !getOnlineUsersInRoom(roomId, user.getUserId()))
+//                .flatMap(user -> tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON).stream())
+//                .filter(Objects::nonNull)
+//                .toList();
 //
-//        User user = message.getUser();
-//        String roomName = room.getRoomName();
-//        String content = user.getNickname() + "\n" +
-//                (message.getMessageType().equals(MessageType.TEXT) ?
-//                message.getContent()
-//                : messagePlaceDetailRepository.findByMessage_MessageId(message.getMessageId()).getDisplayName());
-//        String image = user.getPhotoUrl();
+//        if (!tokens.isEmpty()) {
+//            User user = message.getUser();
+//            String roomName = room.getRoomName();
+//            String content = user.getNickname() + "\n" + message.getContent();
+//            String image = user.getPhotoUrl();
 //
-//        for (Token t : tokens) {
-//            FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                    .requestType(RequestType.MESSAGE)
-//                    .id(0L)
-//                    .title(roomName)
-//                    .content(content)
-//                    .image(image)
-//                    .token(t.getToken())
-//                    .build();
+//            for (Token t : tokens) {
+//                FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+//                        .requestType(RequestType.MESSAGE)
+//                        .id(0L)
+//                        .title(roomName)
+//                        .content(content)
+//                        .image(image)
+//                        .token(t.getToken())
+//                        .build();
 //
-//            fcmSender.sendPushNotification(fcmSendRequest);
+//                fcmSender.sendPushNotification(fcmSendRequest);
+//            }
 //        }
+    }
+
+    private boolean getOnlineUsersInRoom(Long roomId, Long userId) {
+        List<Long> onlineUserIds = new ArrayList<>();
+        String destination = "/sub/chat/" + roomId;
+
+        simpUserRegistry.getUsers().forEach(user -> {
+            user.getSessions().forEach(session -> {
+                session.getSubscriptions().forEach(subscription -> {
+                    if (destination.equals(subscription.getDestination())) {
+                        onlineUserIds.add(Long.parseLong(user.getName()));
+                    }
+                });
+            });
+        });
+        return onlineUserIds.contains(userId);
     }
 
     private PlaceDetail makePlaceDetail(Long messageId) {

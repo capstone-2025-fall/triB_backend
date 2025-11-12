@@ -1,6 +1,9 @@
 package triB.triB.auth.repository;
 
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 
 import java.util.List;
@@ -10,5 +13,6 @@ public interface TokenRepository extends JpaRepository<Token, Long> {
 
     Optional<Token> findByUser_UserIdAndDeviceId(Long userId, String deviceId);
 
-    List<Token> findAllByUser_UserId(Long userId);
+    @Query("select t from Token t where t.user.userId = :userId and t.user.isAlarm = :isAlarm")
+    List<Token> findAllByUser_UserIdAndUser_IsAlarm(@Param("userId") Long userId, @Param("isAlarm") IsAlarm isAlarm);
 }
