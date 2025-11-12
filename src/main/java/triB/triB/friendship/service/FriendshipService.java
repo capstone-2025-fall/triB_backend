@@ -209,6 +209,7 @@ public class FriendshipService {
     private FcmSendRequest sendPushToToken(RequestType requestType, String content, String token) {
         return FcmSendRequest.builder()
                 .requestType(requestType)
+                .id(0L)
                 .title("TriB")
                 .content(content)
                 .image(tribImage)

@@ -173,10 +173,8 @@ public class UserService {
 
     @Transactional
     public void logout(Long userId) {
-        Token t = tokenRepository.findByUser_UserId(userId).orElse(null);
-        if (t != null) {
-            tokenRepository.delete(t);
-        }
+        tokenRepository.findByUser_UserId(userId)
+                .ifPresent(tokenRepository::delete);
     }
 
     private UnlinkResponse unlinkKakao(String providerUserId){
