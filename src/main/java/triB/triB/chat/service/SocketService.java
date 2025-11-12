@@ -337,7 +337,7 @@ public class SocketService {
 //        List<Token> tokens = users.stream()
 //                .filter(user -> !Objects.equals(user.getUserId(), userId))
 //                .filter(user -> !getOnlineUsersInRoom(roomId, user.getUserId()))
-//                .flatMap(user -> tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON).stream())
+//                .map(user -> tokenRepository.findByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON))
 //                .filter(Objects::nonNull)
 //                .toList();
 //
@@ -348,16 +348,18 @@ public class SocketService {
 //            String image = user.getPhotoUrl();
 //
 //            for (Token t : tokens) {
-//                FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                        .requestType(RequestType.MESSAGE)
-//                        .id(0L)
-//                        .title(roomName)
-//                        .content(content)
-//                        .image(image)
-//                        .token(t.getToken())
-//                        .build();
+//                if (t != null) {
+//                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+//                            .requestType(RequestType.MESSAGE)
+//                            .id(0L)
+//                            .title(roomName)
+//                            .content(content)
+//                            .image(image)
+//                            .token(t.getToken())
+//                            .build();
 //
-//                fcmSender.sendPushNotification(fcmSendRequest);
+//                    fcmSender.sendPushNotification(fcmSendRequest);
+//                }
 //            }
 //        }
     }
