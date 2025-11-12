@@ -147,12 +147,12 @@ public class UserService {
     }
 
     @Transactional
-    public void saveToken(Long userId, String deviceId, String token) {
+    public void saveToken(Long userId, String token) {
         try {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
-            tokenRepository.findByUser_UserIdAndDeviceId(userId, deviceId)
+            tokenRepository.findByUser_UserId(userId)
                     .ifPresentOrElse(
                             t -> {
                                 t.setToken(token);
@@ -160,15 +160,22 @@ public class UserService {
                             () -> {
                                 Token t = Token.builder()
                                         .user(user)
-                                        .deviceId(deviceId)
                                         .token(token)
                                         .build();
                                 tokenRepository.save(t);
                             }
                     );
         } catch (DataIntegrityViolationException e){
-            tokenRepository.findByUser_UserIdAndDeviceId(userId, deviceId)
+            tokenRepository.findByUser_UserId(userId)
                     .ifPresent(t -> t.setToken(token));
+        }
+    }
+
+    @Transactional
+    public void logout(Long userId) {
+        Token t = tokenRepository.findByUser_UserId(userId).orElse(null);
+        if (t != null) {
+            tokenRepository.delete(t);
         }
     }
 

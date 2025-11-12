@@ -89,7 +89,17 @@ public class UserController {
     @PostMapping("/token")
     public ResponseEntity<ApiResponse<Void>> saveFcmToken(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TokenRequest tokenRequest) {
         Long userId = userPrincipal.getUserId();
-        userService.saveToken(userId, tokenRequest.getDeviceId(), tokenRequest.getToken());
+        userService.saveToken(userId, tokenRequest.getToken());
         return ApiResponse.ok("토큰을 저장했습니다.", null);
+    }
+
+    /**
+     * 로그아웃 api 구현
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Long userId = userPrincipal.getUserId();
+        userService.logout(userId);
+        return ApiResponse.ok("성공적으로 로그아웃했습니다.", null);
     }
 }

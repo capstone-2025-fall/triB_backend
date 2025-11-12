@@ -137,14 +137,13 @@ public class FriendshipService {
 
         friendshipRepository.save(friendship);
 
-//        //FCM 메세지 알림 보내기
-//        List<Token> token = tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(userId2, IsAlarm.ON);
-//
-//        for (Token t : token) {
-//            FcmSendRequest fcmSendRequest
-//                    = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", t.getToken());
-//            fcmSender.sendPushNotification(fcmSendRequest);
-//        }
+        //FCM 메세지 알림 보내기
+        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
+        if (token != null) {
+            FcmSendRequest fcmSendRequest
+                    = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", token.getToken());
+            fcmSender.sendPushNotification(fcmSendRequest);
+        }
     }
 
     // 내게 온 요청 확인
@@ -185,14 +184,13 @@ public class FriendshipService {
         friendRepository.save(friend1);
         friendRepository.save(friend2);
 
-//        // FCM 메세지 알림 보내기
-//        List<Token> token = tokenRepository.findAllByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
-//
-//        for (Token t : token) {
-//            FcmSendRequest fcmSendRequest =
-//                    sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getNickname()+" 님과 친구가 되었어요!", t.getToken());
-//            fcmSender.sendPushNotification(fcmSendRequest);
-//        }
+        // FCM 메세지 알림 보내기
+        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
+        if (token != null) {
+            FcmSendRequest fcmSendRequest =
+                    sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getNickname()+" 님과 친구가 되었어요!", token.getToken());
+            fcmSender.sendPushNotification(fcmSendRequest);
+        }
     }
 
     // 내게 온 친구요청 거절

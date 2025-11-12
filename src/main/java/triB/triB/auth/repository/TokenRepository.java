@@ -11,8 +11,8 @@ import java.util.Optional;
 
 public interface TokenRepository extends JpaRepository<Token, Long> {
 
-    Optional<Token> findByUser_UserIdAndDeviceId(Long userId, String deviceId);
+    Optional<Token> findByUser_UserId(Long userId);
 
     @Query("select t from Token t where t.user.userId = :userId and t.user.isAlarm = :isAlarm")
-    List<Token> findAllByUser_UserIdAndUser_IsAlarm(@Param("userId") Long userId, @Param("isAlarm") IsAlarm isAlarm);
+    Token findByUser_UserIdAndUser_IsAlarm(@Param("userId") Long userId, @Param("isAlarm") IsAlarm isAlarm);
 }
