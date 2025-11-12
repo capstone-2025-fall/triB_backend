@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import triB.triB.schedule.dto.RouteRequest;
 import triB.triB.schedule.dto.RouteResponse;
 import triB.triB.schedule.entity.TravelMode;
@@ -28,6 +29,12 @@ public class RoutesApiService {
      * @return 이동 시간 (분 단위), 실패 시 0
      */
     public Integer calculateTravelTime(Double fromLat, Double fromLng, Double toLat, Double toLng, TravelMode travelMode) {
+        // 요청 파라미터 로깅
+        log.info("=== Google Routes API 호출 시작 ===");
+        log.info("출발지: ({}, {})", fromLat, fromLng);
+        log.info("목적지: ({}, {})", toLat, toLng);
+        log.info("이동수단: {}", travelMode != null ? travelMode.name() : TravelMode.DRIVE.name());
+
         try {
             // RouteRequest 생성
             RouteRequest request = RouteRequest.builder()
@@ -51,6 +58,8 @@ public class RoutesApiService {
                     .languageCode("ko")
                     .build();
 
+            log.info("API 요청 전송 중...");
+
             // Google Routes API 호출
             RouteResponse response = googleRoutesWebClient.post()
                     .uri("/directions/v2:computeRoutes")
@@ -60,17 +69,38 @@ public class RoutesApiService {
                     .bodyToMono(RouteResponse.class)
                     .block();
 
+            log.info("API 응답 수신 완료");
+
             // 응답에서 duration 추출
             if (response != null && response.getRoutes() != null && !response.getRoutes().isEmpty()) {
+                log.info("응답 routes 개수: {}", response.getRoutes().size());
                 String duration = response.getRoutes().get(0).getDuration();
-                return parseDurationToMinutes(duration);
+                log.info("Duration (ISO 8601): {}", duration);
+                Integer minutes = parseDurationToMinutes(duration);
+                log.info("계산된 이동시간: {}분", minutes);
+                log.info("=== Google Routes API 호출 성공 ===");
+                return minutes;
             }
 
-            log.warn("Google Routes API returned empty response");
+            log.warn("=== Google Routes API returned empty response ===");
+            log.warn("응답이 비어있습니다. response: {}", response);
+            return 0;
+
+        } catch (WebClientResponseException e) {
+            // HTTP 에러 응답 상세 로깅
+            log.error("=== Google Routes API HTTP 에러 ===");
+            log.error("HTTP 상태 코드: {}", e.getStatusCode());
+            log.error("응답 본문: {}", e.getResponseBodyAsString());
+            log.error("에러 메시지: {}", e.getMessage());
+            log.error("스택트레이스:", e);
             return 0;
 
         } catch (Exception e) {
-            log.error("Failed to calculate travel time: {}", e.getMessage(), e);
+            // 일반 예외 상세 로깅
+            log.error("=== Google Routes API 일반 예외 ===");
+            log.error("예외 타입: {}", e.getClass().getName());
+            log.error("에러 메시지: {}", e.getMessage());
+            log.error("스택트레이스:", e);
             return 0;
         }
     }

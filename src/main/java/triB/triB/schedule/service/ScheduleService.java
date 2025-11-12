@@ -84,8 +84,9 @@ public class ScheduleService {
         // 특정 날짜의 일정 조회
         List<Schedule> schedules = scheduleRepository.findByTripIdAndDayNumber(tripId, targetDayNumber);
 
-        // Schedule 리스트를 ScheduleItemResponse로 매핑
+        // Schedule 리스트를 ScheduleItemResponse로 매핑 (visitOrder 순으로 정렬)
         List<ScheduleItemResponse> scheduleItems = schedules.stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
                 .map(this::mapToScheduleItemResponse)
                 .collect(Collectors.toList());
 
@@ -119,8 +120,9 @@ public class ScheduleService {
         // 특정 날짜의 일정 조회
         List<Schedule> schedules = scheduleRepository.findByTripIdAndDayNumber(tripId, targetDayNumber);
 
-        // Schedule 리스트를 ScheduleItemResponse로 매핑
+        // Schedule 리스트를 ScheduleItemResponse로 매핑 (visitOrder 순으로 정렬)
         List<ScheduleItemResponse> scheduleItems = schedules.stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
                 .map(this::mapToScheduleItemResponse)
                 .collect(Collectors.toList());
 
