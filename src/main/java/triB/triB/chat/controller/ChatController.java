@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.chat.dto.RoomChatResponse;
+import triB.triB.chat.dto.TripCreateStatusResponse;
 import triB.triB.chat.dto.TripResponse;
 import triB.triB.chat.service.ChatService;
 import triB.triB.global.response.ApiResponse;
@@ -41,7 +42,15 @@ public class ChatController {
         return ApiResponse.created("일정을 생성했습니다.", response);
     }
 
-    // 생성된 일정 조회하기
-
+    // 일정 생성 상태 조회
+    @GetMapping("/trip/status")
+    public ResponseEntity<ApiResponse<TripCreateStatusResponse>> tripStatus(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(name = "roomId") Long roomId
+    ){
+        Long userId = userPrincipal.getUserId();
+        TripCreateStatusResponse response = chatService.getTripStatus(userId, roomId);
+        return ApiResponse.ok("일정 생성 상태를 조회했습니다.", response);
+    }
 
 }
