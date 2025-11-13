@@ -329,39 +329,39 @@ public class SocketService {
 
 
     private void sendMessagePushNotification(Long userId, Long roomId, Message message) throws FirebaseMessagingException {
-//        List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(roomId, IsAlarm.ON);
-//        log.info("message push notification send");
-//        Room room = roomRepository.findById(roomId)
-//                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
-//
-//        List<Token> tokens = users.stream()
-//                .filter(user -> !Objects.equals(user.getUserId(), userId))
-//                .filter(user -> !getOnlineUsersInRoom(roomId, user.getUserId()))
-//                .map(user -> tokenRepository.findByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON))
-//                .filter(Objects::nonNull)
-//                .toList();
-//
-//        if (!tokens.isEmpty()) {
-//            User user = message.getUser();
-//            String roomName = room.getRoomName();
-//            String content = user.getNickname() + "\n" + message.getContent();
-//            String image = user.getPhotoUrl();
-//
-//            for (Token t : tokens) {
-//                if (t != null) {
-//                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-//                            .requestType(RequestType.MESSAGE)
-//                            .id(0L)
-//                            .title(roomName)
-//                            .content(content)
-//                            .image(image)
-//                            .token(t.getToken())
-//                            .build();
-//
-//                    fcmSender.sendPushNotification(fcmSendRequest);
-//                }
-//            }
-//        }
+        List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(roomId, IsAlarm.ON);
+        log.info("message push notification send");
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
+
+        List<Token> tokens = users.stream()
+                .filter(user -> !Objects.equals(user.getUserId(), userId))
+                .filter(user -> !getOnlineUsersInRoom(roomId, user.getUserId()))
+                .map(user -> tokenRepository.findByUser_UserIdAndUser_IsAlarm(user.getUserId(), IsAlarm.ON))
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (!tokens.isEmpty()) {
+            User user = message.getUser();
+            String roomName = room.getRoomName();
+            String content = user.getNickname() + "\n" + message.getContent();
+            String image = user.getPhotoUrl();
+
+            for (Token t : tokens) {
+                if (t != null) {
+                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+                            .requestType(RequestType.MESSAGE)
+                            .id(roomId) //roomId넣고 클릭하면 글로이동
+                            .title(roomName)
+                            .content(content)
+                            .image(image)
+                            .token(t.getToken())
+                            .build();
+
+                    fcmSender.sendPushNotification(fcmSendRequest);
+                }
+            }
+        }
     }
 
     private boolean getOnlineUsersInRoom(Long roomId, Long userId) {
