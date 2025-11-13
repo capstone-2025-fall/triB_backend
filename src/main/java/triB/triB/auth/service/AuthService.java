@@ -38,9 +38,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthService {
 
-    @Value("${spring.mail.auth-code-expiration-millis}")
-    private long authCodeExpirationMillis;
-
     private final MailService mailService;
     private final UserRepository userRepository;
     private final OauthAccountRepository oauthAccountRepository;
@@ -49,7 +46,6 @@ public class AuthService {
     private final AwsS3Client s3Client;
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
-    private final TokenRepository tokenRepository;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
@@ -66,7 +62,7 @@ public class AuthService {
         log.info("생성된 인증번호: {}", authCode);
         String content = MailTemplate.signupCode(authCode);
         mailService.sendEmail(email, title, content);
-        redisClient.setData("ev", email, authCode, authCodeExpirationMillis);
+        redisClient.setData("ev", email, authCode, 600);
     }
 
     private String createCode(){
@@ -87,9 +83,11 @@ public class AuthService {
     public void verifiedCode(String email, String code) {
         log.info("이메일 인증번호 확인");
         String upperCode = code.toUpperCase();
-        if (redisClient.getData("ev", email) == null || !redisClient.getData("ev", email).equals(upperCode)) {
+        String savedCode = redisClient.getData("ev", email);
+        if (savedCode == null || !savedCode.equals(upperCode)) {
             throw new RuntimeException("인증번호가 일치하지 않습니다.");
         }
+        redisClient.deleteData("ev",email);
     }
 
     public void duplicateUsername(String username) {
