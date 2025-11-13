@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.user.SimpSubscription;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.IsAlarm;
@@ -372,7 +373,13 @@ public class SocketService {
             user.getSessions().forEach(session -> {
                 session.getSubscriptions().forEach(subscription -> {
                     if (destination.equals(subscription.getDestination())) {
-                        onlineUserIds.add(Long.parseLong(user.getName()));
+                        if (user.getPrincipal() instanceof UsernamePasswordAuthenticationToken) {
+                            UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) user.getPrincipal();
+                            if (auth.getPrincipal() instanceof UserPrincipal) {
+                                UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
+                                onlineUserIds.add(userPrincipal.getUserId());
+                            }
+                        }
                     }
                 });
             });

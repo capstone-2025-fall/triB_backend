@@ -45,7 +45,7 @@ public class UserPrincipal implements OAuth2User, UserDetails, Principal {
 
     @Override
     public String getName() {
-        return String.valueOf(userId);
+        return nickname;
     }
 
 }
