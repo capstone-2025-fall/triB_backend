@@ -25,6 +25,7 @@ import triB.triB.chat.repository.MessageRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.global.exception.CustomException;
 import triB.triB.global.exception.ErrorCode;
+import triB.triB.global.infra.RedisClient;
 import triB.triB.room.entity.Room;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
@@ -59,6 +60,7 @@ public class ChatService {
     private final @Qualifier("aiModelWebClient") WebClient aiModelWebClient;
     private final ScheduleRepository scheduleRepository;
     private final TripRepository tripRepository;
+    private final RedisClient redisClient;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -113,70 +115,91 @@ public class ChatService {
         if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
             throw new BadCredentialsException("해당 권한이 없습니다.");
 
-        List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId);
+        // Redis에 설정된 락있는지 확인
+        Boolean locked = redisClient.setIfAbsent("trip:create:lock", String.valueOf(roomId), String.valueOf(TripCreateStatus.WAITING),600);
 
-        List<ModelRequest.ModelPlaceRequest> places = new ArrayList<>();
-        List<String> mustVisit = new ArrayList<>();
-        List<String> rule = new ArrayList<>();
-        List<String> chat = new ArrayList<>();
-
-        MessagePlace place = null;
-        MessageBookmark bookmark = null;
-
-        for (Message message : messages) {
-            place = messagePlaceRepository.findByMessage_MessageId(message.getMessageId());
-            bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
-
-            // 장소 태그가 저장 되어있고 북마크 되어있음
-            if (place != null && bookmark != null)
-                mustVisit.add(message.getContent());
-            // 장소태그만 저장되어있음
-            else if (place != null)
-                places.add(new ModelRequest.ModelPlaceRequest(message.getContent(), place.getPlaceTag()));
-            // 북마크만 되어있음
-            else if (bookmark != null)
-                rule.add(message.getContent());
-
-            chat.add(message.getContent());
+        if (!locked){
+            throw new CustomException(ErrorCode.TRIP_CREATING_IN_PROGRESS);
         }
 
-        ModelRequest modelRequest = ModelRequest.builder()
-                .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
-                .startDate(room.getStartDate().toString())
-                .country(room.getDestination())
-                .members(userRoomRepository.countByRoom_RoomId(roomId))
-                .places(places)
-                .mustVisit(mustVisit)
-                .rule(rule)
-                .chat(chat)
-                .build();
+        try {
+            List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId);
 
-        log.info("모델 통신 시작");
-        return aiModelWebClient.post()
-                .uri("/api/v2/itinerary/generate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(modelRequest)
-                .retrieve()
-                .onStatus(
-                        HttpStatusCode::is4xxClientError,
-                        res -> res.createException().flatMap(e -> {
-                            log.error("AI 모델 요청 오류: {}", e.getMessage());
-                            return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
-                        })
-                )
-                .onStatus(
-                        HttpStatusCode::is5xxServerError,
-                        res -> res.createException().flatMap(e -> {
-                            log.error("AI 모델 서버 오류: {}", e.getMessage());
-                            return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
-                        })
-                )
-                .bodyToMono(ModelResponse.class)
-                .map(body -> saveTripAndSchedule(room, body))
-                .onErrorResume(e -> {
-                    log.error("Trip 저장 실패", e.getMessage());
-                    return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
-                });
+            List<ModelRequest.ModelPlaceRequest> places = new ArrayList<>();
+            List<String> mustVisit = new ArrayList<>();
+            List<String> rule = new ArrayList<>();
+            List<String> chat = new ArrayList<>();
+
+            MessagePlace place = null;
+            MessageBookmark bookmark = null;
+
+            for (Message message : messages) {
+                place = messagePlaceRepository.findByMessage_MessageId(message.getMessageId());
+                bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
+
+                // 장소 태그가 저장 되어있고 북마크 되어있음
+                if (place != null && bookmark != null)
+                    mustVisit.add(message.getContent());
+                    // 장소태그만 저장되어있음
+                else if (place != null)
+                    places.add(new ModelRequest.ModelPlaceRequest(message.getContent(), place.getPlaceTag()));
+                    // 북마크만 되어있음
+                else if (bookmark != null)
+                    rule.add(message.getContent());
+
+                chat.add(message.getContent());
+            }
+
+            ModelRequest modelRequest = ModelRequest.builder()
+                    .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
+                    .startDate(room.getStartDate().toString())
+                    .country(room.getDestination())
+                    .members(userRoomRepository.countByRoom_RoomId(roomId))
+                    .places(places)
+                    .mustVisit(mustVisit)
+                    .rule(rule)
+                    .chat(chat)
+                    .build();
+
+            log.info("모델 통신 시작");
+            return aiModelWebClient.post()
+                    .uri("/api/v2/itinerary/generate")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(modelRequest)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::is4xxClientError,
+                            res -> res.createException().flatMap(e -> {
+                                log.error("AI 모델 요청 오류: {}", e.getMessage());
+                                return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
+                            })
+                    )
+                    .onStatus(
+                            HttpStatusCode::is5xxServerError,
+                            res -> res.createException().flatMap(e -> {
+                                log.error("AI 모델 서버 오류: {}", e.getMessage());
+                                return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
+                            })
+                    )
+                    .bodyToMono(ModelResponse.class)
+                    .map(body -> saveTripAndSchedule(room, body))
+                    .doFinally(signal -> {
+                        redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
+                        log.info("락 해제 완료: signal = {}", signal);
+                    })
+                    .onErrorResume(e -> {
+                        if (e instanceof CustomException) {
+                            log.error("에러 발생: {}", e.getMessage());
+                            return Mono.error(e);
+                        }
+                        log.error("Trip 저장 실패", e.getMessage());
+                        return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
+                    });
+        } catch (Exception e){
+            redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
+            log.error("Trip 생성 중 오류 발생", e);
+            return Mono.error(new CustomException(ErrorCode.TRIP_PREPARATION_FAILED));
+        }
     }
 
     @Transactional
@@ -194,6 +217,7 @@ public class ChatService {
                 .build();
         tripRepository.save(t);
 
+        // DB에 성공적으로 저장
         body.getItinerary().stream()
                 .forEach(itinerary -> {
                     itinerary.getVisits()
@@ -220,7 +244,20 @@ public class ChatService {
                                 scheduleRepository.save(schedule);
                             });
                 });
+
         return t.getTripId();
+    }
+
+    public TripCreateStatusResponse getTripStatus(Long userId, Long roomId) {
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
+            throw new BadCredentialsException("해당 권한이 없습니다.");
+        Trip t = null;
+        if ((t = tripRepository.findByRoomId(roomId)) != null && redisClient.getData("trip:create:lock", String.valueOf(roomId)) == null)
+            return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
+        else if (redisClient.getData("trip:create:lock", String.valueOf(roomId)) != null)
+            return new TripCreateStatusResponse(TripCreateStatus.WAITING, null);
+        else
+            return new TripCreateStatusResponse(TripCreateStatus.NOT_STARTED, null);
     }
 
     private PlaceDetail makePlaceDetail(Long messageId) {
