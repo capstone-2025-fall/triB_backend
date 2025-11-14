@@ -212,7 +212,7 @@ public class FriendshipService {
                 .id(0L)
                 .title("TriB")
                 .content(content)
-                .image(tribImage)
+                .image(null)
                 .token(token)
                 .build();
     }

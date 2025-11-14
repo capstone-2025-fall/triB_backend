@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.user.SimpSubscription;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -298,6 +299,7 @@ public class SocketService {
                 .build();
     }
 
+    @Async
     public void saveLastReadMessage(Long userId, Long roomId) {
         Long messageId = messageRepository.findLastReadMessageIdByRoom_RoomId(roomId);
         if (messageId == null) {
@@ -344,8 +346,8 @@ public class SocketService {
 
         if (!tokens.isEmpty()) {
             User user = message.getUser();
-            String roomName = room.getRoomName();
-            String content = user.getNickname() + "\n" + message.getContent();
+            String roomName = room.getRoomName() + "\n"+ user.getNickname();
+            String content = message.getContent();
             String image = user.getPhotoUrl();
 
             for (Token t : tokens) {

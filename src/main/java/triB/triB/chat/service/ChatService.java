@@ -70,6 +70,7 @@ public class ChatService {
             throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
 
         log.info("채팅 내용 조회 시작");
+        // todo 3*n 쿼리 조회 최적화
         List<MessageResponse> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId)
                 .stream()
                 .filter(Objects::nonNull)
@@ -105,7 +106,6 @@ public class ChatService {
                 .build();
     }
 
-    // todo 일단은 조회 동기적으로 구현해서 올리고 추후 비동기로 수정하자(디비 조회가 동기적이여서 노란줄)
     // todo 일단 RestAPI로 생성하고 일정 생성 했음을 알리는 걸 WebSocket으로 뿌리자
     @Transactional
     public Mono<Long> makeTrip(Long userId, Long roomId){
@@ -251,11 +251,11 @@ public class ChatService {
     public TripCreateStatusResponse getTripStatus(Long userId, Long roomId) {
         if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
             throw new BadCredentialsException("해당 권한이 없습니다.");
-        Trip t = null;
-        if ((t = tripRepository.findByRoomId(roomId)) != null && redisClient.getData("trip:create:lock", String.valueOf(roomId)) == null)
-            return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
-        else if (redisClient.getData("trip:create:lock", String.valueOf(roomId)) != null)
+        Trip t;
+        if (redisClient.getData("trip:create:lock", String.valueOf(roomId)) != null)
             return new TripCreateStatusResponse(TripCreateStatus.WAITING, null);
+        else if ((t = tripRepository.findByRoomId(roomId)) != null)
+            return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
         else
             return new TripCreateStatusResponse(TripCreateStatus.NOT_STARTED, null);
     }

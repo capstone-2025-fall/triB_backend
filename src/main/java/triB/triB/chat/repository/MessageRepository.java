@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import triB.triB.chat.entity.Message;
-import triB.triB.room.entity.Room;
 
 import java.util.List;
 
@@ -28,4 +27,12 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     Long findLastReadMessageIdByRoom_RoomId(Long roomId);
 
     List<Message> findAllByRoom_RoomIdOrderByCreatedAtAsc(Long roomId);
+
+    // 배치로 안읽은 메시지 수 조회 (읽음 상태가 있는 방들)
+    @Query("select m.room.roomId, count(m) from Message m " +
+            "where m.room.roomId in :roomIds and m.messageId > " +
+            "(select COALESCE(rs.lastReadMessageId, 0) from RoomReadState rs " +
+            "where rs.room.roomId = m.room.roomId and rs.user.userId = :userId) " +
+            "group by m.room.roomId")
+    List<Object[]> countUnreadMessagesBatch(@Param("roomIds") List<Long> roomIds, @Param("userId") Long userId);
 }
