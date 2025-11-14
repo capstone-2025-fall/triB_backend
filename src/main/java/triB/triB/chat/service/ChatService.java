@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.repository.UserRepository;
 import triB.triB.chat.dto.*;
 import triB.triB.chat.entity.*;
 import triB.triB.chat.repository.MessageBookmarkRepository;
@@ -43,6 +44,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -61,6 +63,7 @@ public class ChatService {
     private final ScheduleRepository scheduleRepository;
     private final TripRepository tripRepository;
     private final RedisClient redisClient;
+    private final UserRepository userRepository;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -70,15 +73,28 @@ public class ChatService {
             throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다.");
 
         log.info("채팅 내용 조회 시작");
-        List<MessageResponse> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId)
-                .stream()
+
+        List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId);
+        List<Long> messageIds = messages.stream()
+                .map(Message::getMessageId)
+                .toList();
+
+        Map<Long, PlaceTag> placeTagMap = messagePlaceRepository.findByMessageIds(messageIds).stream()
+                .collect(Collectors.toMap(mp -> mp.getMessage().getMessageId(), MessagePlace::getPlaceTag));
+
+        Map<Long, Boolean> bookmarkMap = messageBookmarkRepository.findByMessageIds(messageIds).stream()
+                .collect(Collectors.toMap(mb -> mb.getMessage().getMessageId(), mb -> true));
+
+        Map<Long, MessagePlaceDetail> placeDetailMap = messagePlaceDetailRepository.findByMessageIds(messageIds).stream()
+                .collect(Collectors.toMap(mpd -> mpd.getMessage().getMessageId(), mpd -> mpd));
+
+        List<MessageResponse> response = messages.stream()
                 .filter(Objects::nonNull)
                 .map(message -> {
                     User user = message.getUser();
-
-                    PlaceTag tag = messagePlaceRepository.findPlaceTagByMessage_MessageId(message.getMessageId());
-                    Boolean isBookmarked = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId()) != null;
-                    PlaceDetail placeDetail = message.getMessageType().equals(MessageType.TEXT) ? null : makePlaceDetail(message.getMessageId());
+                    PlaceTag tag = placeTagMap.getOrDefault(message.getMessageId(), null);
+                    Boolean isBookmarked = bookmarkMap.getOrDefault(message.getMessageId(), false);
+                    PlaceDetail placeDetail = makePlaceDetail(placeDetailMap.getOrDefault(message.getMessageId(), null));
 
                     return MessageResponse.builder()
                             .actionType(null)
@@ -101,11 +117,10 @@ public class ChatService {
 
         return RoomChatResponse.builder()
                 .roomName(room.getRoomName())
-                .messages(messages)
+                .messages(response)
                 .build();
     }
 
-    // todo 일단은 조회 동기적으로 구현해서 올리고 추후 비동기로 수정하자(디비 조회가 동기적이여서 노란줄)
     // todo 일단 RestAPI로 생성하고 일정 생성 했음을 알리는 걸 WebSocket으로 뿌리자
     @Transactional
     public Mono<Long> makeTrip(Long userId, Long roomId){
@@ -251,18 +266,16 @@ public class ChatService {
     public TripCreateStatusResponse getTripStatus(Long userId, Long roomId) {
         if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
             throw new BadCredentialsException("해당 권한이 없습니다.");
-        Trip t = null;
-        if ((t = tripRepository.findByRoomId(roomId)) != null && redisClient.getData("trip:create:lock", String.valueOf(roomId)) == null)
-            return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
-        else if (redisClient.getData("trip:create:lock", String.valueOf(roomId)) != null)
+        Trip t;
+        if (redisClient.getData("trip:create:lock", String.valueOf(roomId)) != null)
             return new TripCreateStatusResponse(TripCreateStatus.WAITING, null);
+        else if ((t = tripRepository.findByRoomId(roomId)) != null)
+            return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
         else
             return new TripCreateStatusResponse(TripCreateStatus.NOT_STARTED, null);
     }
 
-    private PlaceDetail makePlaceDetail(Long messageId) {
-        MessagePlaceDetail mpd = messagePlaceDetailRepository.findByMessage_MessageId(messageId);
-
+    private PlaceDetail makePlaceDetail(MessagePlaceDetail mpd){
         if (mpd == null)
             return null;
 

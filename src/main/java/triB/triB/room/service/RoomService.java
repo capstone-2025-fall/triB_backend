@@ -210,7 +210,6 @@ public class RoomService {
         return responses;
     }
 
-    // todo batch 조회 형식으로 수정해서 조회 최적화하기
     private List<RoomsResponse> roomList(List<UserRoom> userRooms, Long userId) {
         if (userRooms.isEmpty()) {
             log.info("유저가 참여한 채팅방이 없습니다.");
@@ -255,26 +254,9 @@ public class RoomService {
 
         // 5. 읽지 않은 메세지 수를 배치로 가져오기
         Map<Long, Integer> notReadMessageTotalMap = new HashMap<>();
-
-        List<Long> roomsWithReadState = lastMessageIdMap.keySet().stream().toList();
-        List<Long> roomsWithoutReadState = roomIds.stream()
-                .filter(id -> !lastMessageIdMap.containsKey(id))
-                .toList();
-
-        // 읽음 상태가 없는 방들의 전체 메세지 수 가져옴
-        if (!roomsWithoutReadState.isEmpty()) {
-            List<Object[]> totalCounts = messageRepository.countByRoomIdIn(roomsWithoutReadState);
-            totalCounts.forEach(row -> notReadMessageTotalMap.put((Long) row[0], ((Number) row[1]).intValue()));
-        }
-
-        // todo N+1 쿼리 문제 발생
-        // 읽음 상태가 있는 방들의 전체 메세지 수 가져옴
-        if (!roomsWithReadState.isEmpty()) {
-            for (Long roomId : roomsWithReadState) {
-                Long lastReadMessageId = lastMessageIdMap.get(roomId);
-                List<Object[]> unreadCounts = messageRepository.countByRoomIdAndMessageIdGreaterThan(roomId, lastReadMessageId);
-                unreadCounts.forEach(row -> notReadMessageTotalMap.put(roomId, ((Number) row[1]).intValue()));
-            }
+        if (!roomIds.isEmpty()) {
+            List<Object[]> unreadCounts = messageRepository.countUnreadMessagesBatch(roomIds, userId);
+            unreadCounts.forEach(row -> notReadMessageTotalMap.put((Long) row[0], ((Number) row[1]).intValue()));
         }
 
         // 6. 메모리에서 최종 응답을 구성함
