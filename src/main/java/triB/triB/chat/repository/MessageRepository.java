@@ -22,11 +22,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     List<Message> findAllByRoom_RoomIdOrderByCreatedAtAsc(Long roomId);
 
-    // 배치로 안읽은 메시지 수 조회 (읽음 상태가 있는 방들)
+    // 배치로 안읽은 메시지 수 조회
     @Query("select m.room.roomId, count(m) from Message m " +
-            "where m.room.roomId in :roomIds and m.messageId > " +
-            "(select COALESCE(rs.lastReadMessageId, 0) from RoomReadState rs " +
-            "where rs.room.roomId = m.room.roomId and rs.user.userId = :userId) " +
+            "left join RoomReadState rs on rs.room.roomId = m.room.roomId and rs.user.userId = :userId " +
+            "where m.room.roomId in :roomIds and m.messageId > COALESCE(rs.lastReadMessageId, 0) " +
             "group by m.room.roomId")
     List<Object[]> countUnreadMessagesBatch(@Param("roomIds") List<Long> roomIds, @Param("userId") Long userId);
 }

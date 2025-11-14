@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.chat.entity.MessageStatus;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.friendship.repository.FriendRepository;
 import triB.triB.room.dto.*;
@@ -244,14 +245,6 @@ public class RoomService {
                         msg -> msg
                 ));
 
-        // 4. 모든 방의 마지막으로 읽은 메세지 ID를 한꺼번에 가져와 Map으로 변환
-        List<Object[]> lastMessageIds = roomReadStateRepository.findLastReadMessageIdsByRoomIdInAndUserId(roomIds, userId);
-        Map<Long, Long> lastMessageIdMap = lastMessageIds.stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Long) row[1]
-                ));
-
         // 5. 읽지 않은 메세지 수를 배치로 가져오기
         Map<Long, Integer> notReadMessageTotalMap = new HashMap<>();
         if (!roomIds.isEmpty()) {
@@ -263,6 +256,14 @@ public class RoomService {
         List<RoomsResponse> responses = new ArrayList<>();
         for (Room r : rooms) {
             Message msg = lastMessageMap.get(r.getRoomId());
+            String content = null;
+            if (msg != null) {
+                if (msg.getMessageStatus() != MessageStatus.DELETE) {
+                    content = msg.getContent();
+                } else {
+                    content = "삭제된 메세지입니다.";
+                }
+            }
             RoomsResponse response = RoomsResponse.builder()
                     .roomId(r.getRoomId())
                     .roomName(r.getRoomName())
@@ -270,7 +271,7 @@ public class RoomService {
                     .destination(r.getDestination())
                     .startDate(r.getStartDate())
                     .endDate(r.getEndDate())
-                    .content((msg != null) ? msg.getContent() : null)
+                    .content(content)
                     .createdAt(r.getCreatedAt())
                     .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0)) //todo 안 읽은 메세지 개수 세는 로직 필요 Entity 추가
                     .build();
