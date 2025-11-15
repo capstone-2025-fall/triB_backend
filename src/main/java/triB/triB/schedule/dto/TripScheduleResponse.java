@@ -34,4 +34,7 @@ public class TripScheduleResponse {
 
     @Schema(description = "해당 날짜의 일정 목록")
     private List<ScheduleItemResponse> schedules;
+
+    @Schema(description = "AI 추정 예산", example = "500000")
+    private Integer budget;
 }

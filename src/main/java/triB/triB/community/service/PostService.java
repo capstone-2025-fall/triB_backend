@@ -240,12 +240,19 @@ public class PostService {
         Trip trip = post.getTripId() != null ?
                 tripRepository.findById(post.getTripId()).orElse(null) : null;
 
+        // 모든 이미지 조회 (displayOrder 순서대로 정렬)
+        List<PostImage> images = postImageRepository.findByPostIdOrderByDisplayOrderAsc(post.getPostId());
+
         // 첫 번째 이미지 URL 조회
-        String coverImageUrl = postImageRepository.findByPostIdOrderByDisplayOrderAsc(post.getPostId())
-                .stream()
+        String coverImageUrl = images.stream()
                 .findFirst()
                 .map(PostImage::getImageUrl)
                 .orElse(null);
+
+        // 모든 이미지 URL 리스트 변환
+        List<String> imageUrls = images.stream()
+                .map(PostImage::getImageUrl)
+                .collect(Collectors.toList());
 
         // 해시태그 조회
         List<Hashtag> hashtags = postHashtagRepository.findByIdPostId(post.getPostId())
@@ -254,7 +261,7 @@ public class PostService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        return PostSummaryResponse.from(post, author, trip, coverImageUrl, hashtags);
+        return PostSummaryResponse.from(post, author, trip, coverImageUrl, imageUrls, hashtags);
     }
 
     private void validateUserInTrip(Long userId, Trip trip) {

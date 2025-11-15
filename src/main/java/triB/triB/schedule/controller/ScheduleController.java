@@ -16,6 +16,7 @@ import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
+import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
 import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
@@ -23,16 +24,34 @@ import triB.triB.schedule.dto.UpdateVisitTimeRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
 import triB.triB.schedule.service.ScheduleService;
+import triB.triB.schedule.service.TripService;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/trips/{tripId}")
+@RequestMapping("/api/v1")
 @Tag(name = "Schedule", description = "일정 관리 API")
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
+    private final TripService tripService;
 
-    @GetMapping("/schedules")
+    @GetMapping("/trips")
+    @Operation(
+            summary = "여행 목록 조회",
+            description = "로그인한 사용자가 참여 중인 승인된 여행 목록을 조회합니다. 각 여행의 기본 정보, 참여자, 예산 정보를 포함합니다."
+    )
+    public ResponseEntity<ApiResponse<List<TripListResponse>>> getTripList(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Long userId = userPrincipal.getUserId();
+        List<TripListResponse> tripList = tripService.getMyTripList(userId);
+
+        return ApiResponse.ok("여행 목록을 조회했습니다.", tripList);
+    }
+
+    @GetMapping("/trips/{tripId}/schedules")
     @Operation(
             summary = "여행 일정 조회",
             description = "특정 여행의 특정 날짜 일정을 조회합니다. dayNumber를 지정하지 않으면 1일차를 반환합니다."
@@ -55,7 +74,7 @@ public class ScheduleController {
         return ApiResponse.ok("일정을 조회했습니다.", response);
     }
 
-    @PatchMapping("/schedules/{scheduleId}/visit-status")
+    @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/visit-status")
     @Operation(
             summary = "방문 완료/미완료 변경",
             description = "일정의 방문 완료 상태를 변경합니다."
@@ -82,7 +101,7 @@ public class ScheduleController {
         return ApiResponse.ok("방문 상태를 변경했습니다.", response);
     }
 
-    @PatchMapping("/schedules/{scheduleId}/reorder")
+    @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/reorder")
     @Operation(
             summary = "일정 순서 변경",
             description = "특정 날짜의 일정 순서를 변경하고 이동시간을 재계산합니다."
@@ -109,7 +128,7 @@ public class ScheduleController {
         return ApiResponse.ok("일정 순서를 변경했습니다.", response);
     }
 
-    @PatchMapping("/schedules/{scheduleId}/stay-duration")
+    @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/stay-duration")
     @Operation(
             summary = "체류시간 수정",
             description = "특정 일정의 체류시간을 수정하고 이후 일정 시간을 재계산합니다."
@@ -136,7 +155,7 @@ public class ScheduleController {
         return ApiResponse.ok("체류시간을 수정했습니다.", response);
     }
 
-    @PatchMapping("/schedules/{scheduleId}/visit-time")
+    @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/visit-time")
     @Operation(
             summary = "방문 시간 수정",
             description = "특정 일정의 방문 시간을 수정하고 이후 일정 시간을 재계산합니다."
@@ -163,7 +182,7 @@ public class ScheduleController {
         return ApiResponse.ok("방문 시간을 수정했습니다.", response);
     }
 
-    @PostMapping("/schedules")
+    @PostMapping("/trips/{tripId}/schedules")
     @Operation(
             summary = "일정 추가",
             description = "특정 날짜의 마지막 일정으로 새로운 장소를 추가합니다."
@@ -186,7 +205,7 @@ public class ScheduleController {
         return ApiResponse.created("일정을 추가했습니다.", response);
     }
 
-    @DeleteMapping("/schedules/{scheduleId}")
+    @DeleteMapping("/trips/{tripId}/schedules/{scheduleId}")
     @Operation(
             summary = "일정 삭제",
             description = "특정 일정을 삭제하고 이후 일정의 순서와 이동시간을 재계산합니다."
@@ -209,7 +228,7 @@ public class ScheduleController {
         return ApiResponse.ok("일정을 삭제했습니다.", response);
     }
 
-    @PatchMapping("/accommodation")
+    @PatchMapping("/trips/{tripId}/accommodation")
     @Operation(
             summary = "숙소 변경 (레거시 API)",
             description = "dayNumber 기반으로 해당 날짜의 숙소를 변경합니다. " +
@@ -234,7 +253,7 @@ public class ScheduleController {
         return ApiResponse.ok("숙소를 변경했습니다.", response);
     }
 
-    @PostMapping("/schedules/preview")
+    @PostMapping("/trips/{tripId}/schedules/preview")
     @Operation(
             summary = "일정 변경 미리보기",
             description = "여러 일정 변경사항을 적용한 결과를 미리 확인합니다. DB에는 저장되지 않습니다."
@@ -257,7 +276,7 @@ public class ScheduleController {
         return ApiResponse.ok("일정 변경사항을 미리보기합니다.", response);
     }
 
-    @PostMapping("/schedules/batch-update")
+    @PostMapping("/trips/{tripId}/schedules/batch-update")
     @Operation(
             summary = "일정 일괄 수정",
             description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다."

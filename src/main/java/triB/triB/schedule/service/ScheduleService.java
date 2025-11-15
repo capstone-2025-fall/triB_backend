@@ -98,6 +98,7 @@ public class ScheduleService {
                 .endDate(room.getEndDate())
                 .currentDay(targetDayNumber)
                 .schedules(scheduleItems)
+                .budget(trip.getBudget())
                 .build();
     }
 
@@ -134,6 +135,7 @@ public class ScheduleService {
                 .endDate(room.getEndDate())
                 .currentDay(targetDayNumber)
                 .schedules(scheduleItems)
+                .budget(trip.getBudget())
                 .build();
     }
 
