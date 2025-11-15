@@ -21,12 +21,14 @@ import triB.triB.schedule.dto.*;
 
 import java.time.LocalTime;
 import triB.triB.schedule.service.ScheduleService;
+import triB.triB.schedule.service.TripService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -44,6 +46,9 @@ class ScheduleControllerTest {
 
     @MockBean
     private ScheduleService scheduleService;
+
+    @MockBean
+    private TripService tripService;
 
     @MockBean
     private JwtProvider jwtProvider;
