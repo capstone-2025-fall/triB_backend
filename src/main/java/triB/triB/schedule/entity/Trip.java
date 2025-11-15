@@ -59,6 +59,9 @@ public class Trip {
     @Enumerated(EnumType.STRING)
     private TravelMode travelMode;
 
+    @Column(name = "budget", nullable = true)
+    private Integer budget;
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
