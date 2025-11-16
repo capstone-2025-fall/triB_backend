@@ -1063,16 +1063,23 @@ public class ScheduleService {
                     // 주의: recalculateDayTravelTimes 호출하지 않음 (routes API 호출 방지)
                 });
 
-        // 4. UPDATE_ACCOMMODATION 적용
+        // 4. UPDATE_ACCOMMODATION 적용 (batch-update용: routes API 호출 없이 위치만 변경)
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.UPDATE_ACCOMMODATION)
                 .forEach(m -> {
-                    updateAccommodationByScheduleId(
-                            m.getScheduleId(),
-                            m.getPlaceName(),
-                            m.getLatitude(),
-                            m.getLongitude()
-                    );
+                    // Schedule 조회 및 PlaceTag.HOME 검증
+                    Schedule accommodation = scheduleRepository.findById(m.getScheduleId())
+                            .orElseThrow(() -> new IllegalArgumentException("해당 일정을 찾을 수 없습니다."));
+
+                    if (accommodation.getPlaceTag() != PlaceTag.HOME) {
+                        throw new IllegalArgumentException("숙소(PlaceTag.HOME)만 변경할 수 있습니다.");
+                    }
+
+                    // 숙소 정보 업데이트 (위치만 변경, travelTime은 UPDATE_TRAVEL_TIME으로 처리)
+                    accommodation.setPlaceName(m.getPlaceName());
+                    accommodation.setLatitude(m.getLatitude());
+                    accommodation.setLongitude(m.getLongitude());
+                    // 주의: routes API 호출하지 않음
                 });
 
         // 5. UPDATE_VISIT_TIME 적용
