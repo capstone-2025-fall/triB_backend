@@ -25,6 +25,7 @@ import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
 import triB.triB.schedule.service.ScheduleService;
 import triB.triB.schedule.service.TripService;
+import triB.triB.schedule.service.TripStatusScheduler;
 
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
     private final TripService tripService;
+    private final TripStatusScheduler tripStatusScheduler;
 
     @GetMapping("/trips")
     @Operation(
@@ -297,5 +299,23 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("일정 변경사항을 저장했습니다.", response);
+    }
+
+    @PostMapping("/trips/status/update-past")
+    @Operation(
+            summary = "과거 여행 상태 수동 업데이트",
+            description = "종료일이 지난 READY 상태의 여행을 ACCEPTED 상태로 수동 업데이트합니다. " +
+                    "정상적으로는 매일 새벽 2시에 자동 실행되지만, 필요시 수동으로 실행할 수 있습니다. " +
+                    "인증이 필요하지 않습니다."
+    )
+    public ResponseEntity<ApiResponse<Integer>> updatePastTripStatuses() {
+        int updatedCount = tripStatusScheduler.updatePastTripStatusesManually();
+
+        return ApiResponse.ok(
+                updatedCount > 0
+                    ? updatedCount + "개의 여행 상태가 ACCEPTED로 변경되었습니다."
+                    : "업데이트할 과거 여행이 없습니다.",
+                updatedCount
+        );
     }
 }
