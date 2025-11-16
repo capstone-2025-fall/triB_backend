@@ -98,6 +98,7 @@ public class ScheduleService {
                 .endDate(room.getEndDate())
                 .currentDay(targetDayNumber)
                 .schedules(scheduleItems)
+                .budget(trip.getBudget())
                 .build();
     }
 
@@ -134,6 +135,7 @@ public class ScheduleService {
                 .endDate(room.getEndDate())
                 .currentDay(targetDayNumber)
                 .schedules(scheduleItems)
+                .budget(trip.getBudget())
                 .build();
     }
 
@@ -378,6 +380,13 @@ public class ScheduleService {
 
         // 새 일정 저장
         Schedule savedSchedule = scheduleRepository.save(newSchedule);
+
+        // 새 일정의 visitOrder보다 크거나 같은 기존 일정들의 visitOrder를 +1 증가
+        for (Schedule schedule : daySchedules) {
+            if (schedule.getVisitOrder() >= newVisitOrder) {
+                schedule.setVisitOrder(schedule.getVisitOrder() + 1);
+            }
+        }
 
         // 숙소가 있다면 새 일정과 숙소 간 travelTime 계산
         Schedule accommodationSchedule = null;
