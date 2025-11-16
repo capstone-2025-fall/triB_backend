@@ -93,9 +93,6 @@ public class UserController {
         return ApiResponse.ok("토큰을 저장했습니다.", null);
     }
 
-    /**
-     * 로그아웃 api 구현
-     */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         Long userId = userPrincipal.getUserId();

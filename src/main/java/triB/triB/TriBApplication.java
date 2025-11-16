@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableCaching
 @EnableScheduling
-@EnableAsync
 @SpringBootApplication
 public class TriBApplication {
 
