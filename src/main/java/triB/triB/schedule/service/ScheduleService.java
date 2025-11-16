@@ -1098,6 +1098,20 @@ public class ScheduleService {
                     updateStayDuration(tripId, m.getScheduleId(), updateDurationRequest, userId);
                 });
 
+        // 7. UPDATE_TRAVEL_TIME 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.UPDATE_TRAVEL_TIME)
+                .forEach(m -> {
+                    Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(m.getScheduleId(), tripId)
+                            .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+                    // 프론트엔드에서 전달받은 이동시간으로 업데이트
+                    schedule.setTravelTime(m.getTravelTime());
+                });
+
+        // 8. 모든 변경사항 적용 후 departure/arrival 시간 재계산
+        recalculateDepartureTimes(tripId, dayNumber);
+
         // 최종 결과 조회 및 반환
         return getTripSchedules(tripId, dayNumber, userId);
     }
