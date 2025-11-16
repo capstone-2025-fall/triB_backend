@@ -23,6 +23,7 @@ import triB.triB.community.dto.response.HotPostResponse;
 import triB.triB.community.dto.response.PostDetailsResponse;
 import triB.triB.community.dto.response.PostLikeResponse;
 import triB.triB.community.dto.response.PostSummaryResponse;
+import triB.triB.community.dto.response.TripSharePreviewResponse;
 import triB.triB.community.entity.Hashtag;
 import triB.triB.community.entity.Post;
 import triB.triB.community.entity.PostType;
@@ -55,17 +56,28 @@ public class PostController {
     private final PostRepository postRepository;
     private final ScheduleService scheduleService;
 
+    @Operation(summary = "일정 공유 게시글 미리보기",
+               description = "일정 공유 게시글 작성 전 AI가 생성한 해시태그와 여행 일정을 미리 조회합니다.")
+    @PostMapping("/trip-share/preview")
+    public ResponseEntity<ApiResponse<TripSharePreviewResponse>> getTripSharePreview(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam("tripId") Long tripId) {
+
+        Long userId = userPrincipal.getUserId();
+        TripSharePreviewResponse response = postService.getTripSharePreview(userId, tripId);
+
+        return ApiResponse.ok("일정 공유 미리보기 정보를 조회했습니다.", response);
+    }
+
     @Operation(summary = "일정 공유 게시글 작성",
-               description = "TRIP_SHARE 타입 게시글을 작성합니다. 여행 정보와 이미지를 함께 업로드할 수 있습니다.")
+               description = "TRIP_SHARE 타입 게시글을 작성합니다. tripId, content, 선택한 해시태그, 이미지를 함께 업로드합니다.")
     @PostMapping(value = "/trip-share", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PostDetailsResponse>> createTripSharePost(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @RequestParam("tripId") Long tripId,
+            @Valid @RequestPart("request") TripSharePostCreateRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 
         Long userId = userPrincipal.getUserId();
-        TripSharePostCreateRequest request = new TripSharePostCreateRequest();
-        request.setTripId(tripId);
         PostDetailsResponse response = postService.createTripSharePost(userId, request, images);
 
         return ApiResponse.created("일정 공유 게시글이 작성되었습니다.", response);

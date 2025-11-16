@@ -27,6 +27,7 @@ public enum ErrorCode {
     TRIP_NOT_FOUND(HttpStatus.NOT_FOUND, "TRIP_NOT_FOUND", "여행 정보를 찾을 수 없습니다."),
     USER_NOT_IN_TRIP(HttpStatus.FORBIDDEN, "USER_NOT_IN_TRIP", "해당 여행의 참여자가 아닙니다."),
     INVALID_HASHTAG(HttpStatus.BAD_REQUEST, "INVALID_HASHTAG", "유효하지 않은 해시태그입니다. Predefined 해시태그만 사용 가능합니다."),
+    HASHTAG_NOT_FOUND(HttpStatus.NOT_FOUND, "HASHTAG_NOT_FOUND", "일부 해시태그를 찾을 수 없습니다."),
 
     // Schedule 관련 에러
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다."),

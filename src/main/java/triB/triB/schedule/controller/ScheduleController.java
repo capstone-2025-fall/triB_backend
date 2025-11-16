@@ -23,6 +23,7 @@ import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.UpdateVisitTimeRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateRequest;
 import triB.triB.schedule.dto.VisitStatusUpdateResponse;
+import triB.triB.schedule.entity.TripFilterType;
 import triB.triB.schedule.service.ScheduleService;
 import triB.triB.schedule.service.TripService;
 import triB.triB.schedule.service.TripStatusScheduler;
@@ -51,6 +52,27 @@ public class ScheduleController {
         List<TripListResponse> tripList = tripService.getMyTripList(userId);
 
         return ApiResponse.ok("여행 목록을 조회했습니다.", tripList);
+    }
+
+    @GetMapping("/trips/filtered")
+    @Operation(
+            summary = "필터링된 여행 목록 조회",
+            description = "로그인한 사용자가 참여 중인 여행 목록을 필터링하여 조회합니다. " +
+                    "필터 옵션: FUTURE(미래 여행, 기본값), PAST(과거 여행). " +
+                    "미래 여행은 시작일 오름차순, 과거 여행은 시작일 내림차순으로 정렬됩니다."
+    )
+    public ResponseEntity<ApiResponse<List<TripListResponse>>> getFilteredTripList(
+            @Parameter(
+                    description = "여행 필터 타입 (FUTURE: 미래 여행, PAST: 과거 여행)",
+                    example = "FUTURE"
+            )
+            @RequestParam(value = "filter", defaultValue = "FUTURE") TripFilterType filter,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Long userId = userPrincipal.getUserId();
+        List<TripListResponse> tripList = tripService.getFilteredTripList(userId, filter);
+
+        return ApiResponse.ok("필터링된 여행 목록을 조회했습니다.", tripList);
     }
 
     @GetMapping("/trips/{tripId}/schedules")

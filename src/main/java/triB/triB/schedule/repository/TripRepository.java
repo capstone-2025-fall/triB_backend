@@ -39,4 +39,30 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
            "WHERE t.tripStatus = 'READY' " +
            "AND r.endDate < :currentDate")
     List<Trip> findReadyTripsBeforeEndDate(@Param("currentDate") LocalDate currentDate);
+
+    /**
+     * 사용자의 미래 여행 조회 (READY 상태, startDate 오름차순)
+     * @param userId 사용자 ID
+     * @param tripStatus 여행 상태
+     * @return 미래 여행 목록 (시작일 오름차순)
+     */
+    @Query("SELECT DISTINCT t FROM Trip t " +
+           "JOIN t.room r " +
+           "WHERE t.tripStatus = :tripStatus " +
+           "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
+           "ORDER BY r.startDate ASC, t.createdAt DESC")
+    List<Trip> findFutureTripsByUserId(@Param("userId") Long userId, @Param("tripStatus") TripStatus tripStatus);
+
+    /**
+     * 사용자의 과거 여행 조회 (ACCEPTED 상태, startDate 내림차순)
+     * @param userId 사용자 ID
+     * @param tripStatus 여행 상태
+     * @return 과거 여행 목록 (시작일 내림차순)
+     */
+    @Query("SELECT DISTINCT t FROM Trip t " +
+           "JOIN t.room r " +
+           "WHERE t.tripStatus = :tripStatus " +
+           "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
+           "ORDER BY r.startDate DESC, t.createdAt DESC")
+    List<Trip> findPastTripsByUserId(@Param("userId") Long userId, @Param("tripStatus") TripStatus tripStatus);
 }
