@@ -101,7 +101,7 @@ public class PostService {
         // 4. Trip의 Room에서 room_name 가져오기
         String roomName = trip.getRoom().getRoomName();
 
-        // 5. Post 엔티티 생성 (제목은 room_name, content는 null)
+        // 5. Post 엔티티 생성 (제목은 room_name, content는 사용자 입력)
         Post post = Post.builder()
                 .userId(userId)
                 .user(user)
@@ -109,7 +109,7 @@ public class PostService {
                 .tripId(request.getTripId())
                 .trip(trip)
                 .title(roomName)
-                .content(null)
+                .content(request.getContent())
                 .likesCount(0)
                 .commentsCount(0)
                 .build();
@@ -131,8 +131,15 @@ public class PostService {
             }
         }
 
-        // 7. AI 해시태그 생성 및 연결
-        List<Hashtag> hashtags = hashtagService.generateHashtagsForTripShare(trip);
+        // 7. 선택된 해시태그 처리
+        List<Hashtag> hashtags = hashtagRepository.findAllById(request.getSelectedHashtagIds());
+
+        // 7-1. 모든 요청된 해시태그가 DB에 존재하는지 검증
+        if (hashtags.size() != request.getSelectedHashtagIds().size()) {
+            throw new CustomException(ErrorCode.HASHTAG_NOT_FOUND);
+        }
+
+        // 7-2. PostHashtag 관계 생성
         for (Hashtag hashtag : hashtags) {
             PostHashtagId postHashtagId = new PostHashtagId(savedPost.getPostId(), hashtag.getHashtagId());
             PostHashtag postHashtag = PostHashtag.builder()
