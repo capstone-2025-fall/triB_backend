@@ -15,6 +15,7 @@ import triB.triB.schedule.dto.BatchUpdateScheduleRequest;
 import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
+import triB.triB.schedule.dto.RepresentativeTripResponse;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -73,6 +74,24 @@ public class ScheduleController {
         List<TripListResponse> tripList = tripService.getFilteredTripList(userId, filter);
 
         return ApiResponse.ok("필터링된 여행 목록을 조회했습니다.", tripList);
+    }
+
+    @GetMapping("/trips/representative")
+    @Operation(
+            summary = "대표 여행 ID 조회",
+            description = "사용자의 대표 여행 ID를 우선순위에 따라 반환합니다. " +
+                    "우선순위: 1) 현재 진행 중인 여행 (가장 늦게 끝나는 것), " +
+                    "2) 가장 가까운 미래 여행, " +
+                    "3) 가장 최근에 종료된 여행, " +
+                    "4) 여행이 없으면 null 반환"
+    )
+    public ResponseEntity<ApiResponse<RepresentativeTripResponse>> getRepresentativeTrip(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Long userId = userPrincipal.getUserId();
+        RepresentativeTripResponse response = tripService.getRepresentativeTrip(userId);
+
+        return ApiResponse.ok("대표 여행을 조회했습니다.", response);
     }
 
     @GetMapping("/trips/{tripId}/schedules")

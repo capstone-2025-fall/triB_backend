@@ -34,6 +34,18 @@ public class RouteRequest {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "경유지 래퍼")
+    public static class WaypointWrapper {
+        @JsonProperty("waypoint")
+        @Schema(description = "경유지 정보")
+        private LocationWrapper waypoint;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "위치 정보 래퍼")
     public static class LocationWrapper {
         @JsonProperty("location")
