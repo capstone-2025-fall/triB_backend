@@ -322,7 +322,9 @@ public class ScheduleController {
     @PostMapping("/trips/{tripId}/schedules/batch-update")
     @Operation(
             summary = "일정 일괄 수정",
-            description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다."
+            description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다. " +
+                    "이동시간은 프론트엔드에서 계산하여 UPDATE_TRAVEL_TIME 타입으로 전달해야 합니다. " +
+                    "routes API는 자동으로 호출되지 않으며, arrival/departure 시간은 전달받은 이동시간을 기반으로 재계산됩니다."
     )
     public ResponseEntity<ApiResponse<TripScheduleResponse>> batchUpdateSchedule(
             @Parameter(description = "여행 ID", required = true)
