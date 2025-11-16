@@ -75,6 +75,7 @@ public class ScheduleModificationItem {
     private Double longitude;
 
     // ===== UPDATE_TRAVEL_TIME에 사용 =====
-    @Schema(description = "이동시간 (UPDATE_TRAVEL_TIME용) - '30분', '1시간 30분' 형식", example = "30분")
-    private String travelTime;
+    @Schema(description = "이동시간 분 단위 (UPDATE_TRAVEL_TIME용)", example = "30")
+    @Positive(message = "이동시간은 1분 이상이어야 합니다.")
+    private Integer travelTime;
 }

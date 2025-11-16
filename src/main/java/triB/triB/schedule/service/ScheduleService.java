@@ -822,7 +822,7 @@ public class ScheduleService {
 
     /**
      * travelTime 문자열을 분 단위로 파싱
-     * 예: "30분" -> 30, "1시간 30분" -> 90, "2시간" -> 120
+     * 예: "30분" -> 30, "1시간 30분" -> 90, "2시간" -> 120, "30" -> 30 (백워드 호환)
      */
     private Integer parseTravelTimeToMinutes(String travelTimeText) {
         if (travelTimeText == null || travelTimeText.isEmpty()) {
@@ -849,12 +849,38 @@ public class ScheduleService {
                 // "분"만 있는 경우
                 String minutePart = travelTimeText.replace("분", "").trim();
                 totalMinutes = Integer.parseInt(minutePart);
+            } else {
+                // 숫자만 있는 경우 (백워드 호환성을 위해 분 단위로 간주)
+                totalMinutes = Integer.parseInt(travelTimeText.trim());
             }
 
             return totalMinutes;
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    /**
+     * 분 단위 숫자를 한국어 형식 문자열로 변환
+     * 예: 30 -> "30분", 90 -> "1시간 30분", 120 -> "2시간"
+     */
+    private String convertMinutesToKoreanFormat(Integer minutes) {
+        if (minutes == null || minutes == 0) {
+            return "0분";
+        }
+
+        if (minutes < 60) {
+            return minutes + "분";
+        }
+
+        int hours = minutes / 60;
+        int remainingMinutes = minutes % 60;
+
+        if (remainingMinutes == 0) {
+            return hours + "시간";
+        }
+
+        return hours + "시간 " + remainingMinutes + "분";
     }
 
     /**
@@ -884,7 +910,7 @@ public class ScheduleService {
                 .arrival(schedule.getArrival())
                 .departure(schedule.getDeparture())
                 .placeTag(schedule.getPlaceTag())
-                .travelTime(schedule.getTravelTime())
+                .travelTime(parseTravelTimeToMinutes(schedule.getTravelTime()))
                 .visitOrder(schedule.getVisitOrder())
                 .isVisit(schedule.getIsVisit())
                 .build();
@@ -1105,8 +1131,9 @@ public class ScheduleService {
                     Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(m.getScheduleId(), tripId)
                             .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
-                    // 프론트엔드에서 전달받은 이동시간으로 업데이트
-                    schedule.setTravelTime(m.getTravelTime());
+                    // 프론트엔드에서 전달받은 분 단위 이동시간을 한국어 형식으로 변환하여 업데이트
+                    String travelTimeKorean = convertMinutesToKoreanFormat(m.getTravelTime());
+                    schedule.setTravelTime(travelTimeKorean);
                 });
 
         // 8. 모든 변경사항 적용 후 departure/arrival 시간 재계산
