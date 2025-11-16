@@ -957,12 +957,42 @@ public class ScheduleService {
                     addScheduleToDay(tripId, addRequest, userId);
                 });
 
-        // 3. REORDER 적용
+        // 3. REORDER 적용 (batch-update용: routes API 호출 없이 순서만 변경)
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.REORDER)
                 .forEach(m -> {
-                    ReorderScheduleRequest reorderRequest = new ReorderScheduleRequest(m.getNewVisitOrder());
-                    reorderSchedule(tripId, m.getScheduleId(), reorderRequest, userId);
+                    // Schedule 조회
+                    Schedule targetSchedule = scheduleRepository.findByScheduleIdAndTripId(m.getScheduleId(), tripId)
+                            .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+                    Integer currentOrder = targetSchedule.getVisitOrder();
+                    Integer newOrder = m.getNewVisitOrder();
+
+                    // 같은 순서면 스킵
+                    if (currentOrder.equals(newOrder)) {
+                        return;
+                    }
+
+                    // 해당 날짜의 모든 일정 조회 (visitOrder 순으로 정렬)
+                    List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber)
+                            .stream()
+                            .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                            .collect(Collectors.toList());
+
+                    // 새로운 순서가 유효한지 검증
+                    if (newOrder < 1 || newOrder > daySchedules.size()) {
+                        throw new IllegalArgumentException("유효하지 않은 방문 순서입니다. (1-" + daySchedules.size() + " 사이여야 합니다)");
+                    }
+
+                    // 순서 변경 로직
+                    daySchedules.removeIf(s -> s.getScheduleId().equals(m.getScheduleId()));
+                    daySchedules.add(newOrder - 1, targetSchedule);
+
+                    // 모든 일정의 visitOrder 재정렬
+                    for (int i = 0; i < daySchedules.size(); i++) {
+                        daySchedules.get(i).setVisitOrder(i + 1);
+                    }
+                    // 주의: recalculateDayTravelTimes 호출하지 않음 (routes API 호출 방지)
                 });
 
         // 4. UPDATE_ACCOMMODATION 적용
