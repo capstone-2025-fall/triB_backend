@@ -9,6 +9,7 @@ import triB.triB.budget.repository.TripUserBudgetRepository;
 import triB.triB.room.entity.Room;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
+import triB.triB.schedule.dto.RepresentativeTripResponse;
 import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripParticipantResponse;
 import triB.triB.schedule.entity.Trip;
@@ -17,6 +18,7 @@ import triB.triB.schedule.entity.TripStatus;
 import triB.triB.schedule.repository.TripRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -107,6 +109,50 @@ public class TripService {
                 .participants(participantResponses)
                 .budget(trip.getBudget())  // AI 추정 예산
                 .userBudget(userBudget)    // 사용자 설정 예산
+                .build();
+    }
+
+    /**
+     * 대표 여행 ID 조회 (우선순위에 따라 하나의 여행 선택)
+     * 우선순위:
+     * 1. 현재 진행 중인 여행 (시작일 <= 오늘 <= 종료일) - 가장 늦게 끝나는 일정
+     * 2. 가장 가까운 미래의 여행 (시작일 > 오늘) - 시작일이 가장 가까운 일정
+     * 3. 가장 최근에 종료된 여행 (종료일 < 오늘) - 종료일이 가장 가까운 일정
+     * 4. 여행이 없는 경우 null 반환
+     *
+     * @param userId 사용자 ID
+     * @return 대표 여행 ID 응답 (여행이 없으면 tripId가 null)
+     */
+    public RepresentativeTripResponse getRepresentativeTrip(Long userId) {
+        LocalDate today = LocalDate.now();
+
+        // 우선순위 1: 현재 진행 중인 여행 (가장 늦게 끝나는 것)
+        List<Trip> ongoingTrips = tripRepository.findOngoingTripsByUserId(userId, today);
+        if (!ongoingTrips.isEmpty()) {
+            return RepresentativeTripResponse.builder()
+                    .tripId(ongoingTrips.get(0).getTripId())
+                    .build();
+        }
+
+        // 우선순위 2: 가장 가까운 미래 여행
+        List<Trip> upcomingTrips = tripRepository.findUpcomingTripsByUserId(userId, today);
+        if (!upcomingTrips.isEmpty()) {
+            return RepresentativeTripResponse.builder()
+                    .tripId(upcomingTrips.get(0).getTripId())
+                    .build();
+        }
+
+        // 우선순위 3: 가장 최근에 종료된 여행
+        List<Trip> recentlyEndedTrips = tripRepository.findRecentlyEndedTripsByUserId(userId, today);
+        if (!recentlyEndedTrips.isEmpty()) {
+            return RepresentativeTripResponse.builder()
+                    .tripId(recentlyEndedTrips.get(0).getTripId())
+                    .build();
+        }
+
+        // 우선순위 4: 여행이 없는 경우 null 반환
+        return RepresentativeTripResponse.builder()
+                .tripId(null)
                 .build();
     }
 }
