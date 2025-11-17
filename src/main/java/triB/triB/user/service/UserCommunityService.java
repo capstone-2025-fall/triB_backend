@@ -53,8 +53,10 @@ public class UserCommunityService {
 
     private List<PostResponse> getPosts(List<Post> posts){
         List<Long> postIds = posts.stream().map(Post::getPostId).toList();
-        List<User> users = posts.stream().map(Post::getUser).toList();
-        Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getUserId, u -> u));
+        Map<Long, User> userMap = posts.stream()
+                .map(Post::getUser)
+                .distinct()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
 
         List<PostHashtag> hashtags = postHashtagRepository.findByPost_PostIds(postIds);
         Map<Long, List<PostHashtag>> hashtagMap = hashtags.stream()
