@@ -38,7 +38,7 @@ public class Message {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "message_type")
+    @Column(name = "message_type", length = 20)
     private MessageType messageType;
 
     @Enumerated(EnumType.STRING)
