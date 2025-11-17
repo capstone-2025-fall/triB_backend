@@ -41,6 +41,9 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
             @Param("postType") PostType postType,
             @Param("date") LocalDateTime date);
 
+    @Query("select p.title from Post p where p.postId = :postId")
+    String findTitleByPostId(@Param("postId") Long postId);
+
     @Query("select p from Post p left join fetch p.trip t left join fetch t.room join fetch p.user where p.userId = :userId and p.postType = :postType order by p.postId desc")
     List<Post> findByUser_UserIdAndPostTypeOrderByPostIdDesc(@Param("userId") Long userId, @Param("postType") PostType postType);
 }

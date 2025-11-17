@@ -11,6 +11,8 @@ import triB.triB.auth.entity.User;
 import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.chat.entity.MessageStatus;
+import triB.triB.chat.entity.MessageType;
+import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.friendship.repository.FriendRepository;
 import triB.triB.room.dto.*;
@@ -38,8 +40,8 @@ public class RoomService {
     private final UserRoomRepository userRoomRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final RoomReadStateRepository roomReadStateRepository;
     private final FriendRepository friendRepository;
+    private final PostRepository postRepository;
 
     @Transactional(readOnly = true)
     public List<RoomsResponse> getRoomList(Long userId){
@@ -262,6 +264,9 @@ public class RoomService {
                     content = msg.getContent();
                 } else {
                     content = "삭제된 메세지입니다.";
+                }
+                if (msg.getMessageType() == MessageType.COMMUNITY_SHARE){
+                    content = postRepository.findTitleByPostId(Long.parseLong(msg.getContent()));
                 }
             }
             RoomsResponse response = RoomsResponse.builder()
