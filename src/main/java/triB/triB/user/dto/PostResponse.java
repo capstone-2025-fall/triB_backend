@@ -13,7 +13,6 @@ import triB.triB.schedule.entity.Trip;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Getter
 @Builder

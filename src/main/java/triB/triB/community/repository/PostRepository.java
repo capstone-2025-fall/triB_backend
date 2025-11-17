@@ -36,7 +36,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
      * 특정 시간 이후 작성된 게시글 중 좋아요 + 댓글 수가 가장 많은 1개 반환
      */
     @Query("SELECT p FROM Post p WHERE p.postType = :postType AND p.createdAt > :date " +
-           "ORDER BY (p.likesCount + p.commentsCount) DESC, p.createdAt DESC")
+            "ORDER BY (p.likesCount + p.commentsCount) DESC, p.createdAt DESC")
     Post findTopByPostTypeAndCreatedAtAfterOrderByLikesCountDescCommentsCountDesc(
             @Param("postType") PostType postType,
             @Param("date") LocalDateTime date);
