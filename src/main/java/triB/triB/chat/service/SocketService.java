@@ -20,6 +20,7 @@ import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
 import triB.triB.community.entity.Post;
+import triB.triB.community.repository.PostImageRepository;
 import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.room.entity.Room;
@@ -47,6 +48,7 @@ public class SocketService {
     private final RoomReadStateRepository roomReadStateRepository;
     private final PostRepository postRepository;
     private final ApplicationEventPublisher publisher;
+    private final PostImageRepository postImageRepository;
 
 
     // 메세지 전송
@@ -176,6 +178,8 @@ public class SocketService {
         Post p = postRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 게시글이 존재하지 않습니다."));
 
+        String imageUrl = postImageRepository.findImageUrlByPostId(postId);
+
         return MessageResponse.builder()
                 .actionType(ActionType.NEW_COMMUNITY_SHARE)
                 .user(new UserResponse(userId, user.getNickname(), user.getPhotoUrl()))
@@ -187,7 +191,7 @@ public class SocketService {
                         .tag(null)
                         .isBookmarked(null)
                         .placeDetail(null)
-                        .communityDetail(new CommunityDetail(postId, p.getTitle()))
+                        .communityDetail(new CommunityDetail(postId, p.getTitle(), imageUrl))
                         .build()
                 )
                 .createdAt(message.getCreatedAt())

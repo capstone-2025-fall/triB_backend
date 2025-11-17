@@ -20,6 +20,12 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
      */
     void deleteByPostId(Long postId);
 
+
     @Query("select pi from PostImage pi where pi.postId in :postIds order by pi.postId, pi.displayOrder")
     List<PostImage> findImageUrlByPostIds(@Param("postIds") List<Long> postIds);
+
+
+    @Query("select p.imageUrl from PostImage p where p.postId = :postId order by p.displayOrder asc limit 1")
+    String findImageUrlByPostId(@Param("postId") Long postId);
 }
+
