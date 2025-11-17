@@ -23,12 +23,6 @@ import triB.triB.community.entity.Post;
 import triB.triB.community.repository.PostImageRepository;
 import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
-import triB.triB.global.exception.CustomException;
-import triB.triB.global.exception.ErrorCode;
-import triB.triB.global.fcm.FcmSendRequest;
-import triB.triB.global.fcm.FcmSender;
-import triB.triB.global.fcm.RequestType;
-import triB.triB.global.security.UserPrincipal;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.RoomReadState;
 import triB.triB.room.entity.RoomReadStateId;
@@ -38,11 +32,6 @@ import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
