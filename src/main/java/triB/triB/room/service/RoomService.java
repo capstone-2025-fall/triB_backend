@@ -157,8 +157,10 @@ public class RoomService {
             if ((ur = userRoomRepository.findByUser_UserIdAndRoom_RoomId(id, roomId)) != null){
                 if (!ur.getRoomStatus().equals(RoomStatus.EXIT))
                     throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
-                else
+                else{
                     ur.setRoomStatus(RoomStatus.ACTIVE);
+                    userRoomRepository.save(ur);
+                }
             } else {
                 User user = userRepository.findById(id)
                         .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
