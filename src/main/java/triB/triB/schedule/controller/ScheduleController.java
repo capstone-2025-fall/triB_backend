@@ -19,6 +19,7 @@ import triB.triB.schedule.dto.RepresentativeTripResponse;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.TripScheduleWithLocationResponse;
 import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.UpdateVisitTimeRequest;
@@ -99,7 +100,7 @@ public class ScheduleController {
             summary = "여행 일정 조회",
             description = "특정 여행의 특정 날짜 일정을 조회합니다. dayNumber를 지정하지 않으면 1일차를 반환합니다."
     )
-    public ResponseEntity<ApiResponse<TripScheduleResponse>> getTripSchedules(
+    public ResponseEntity<ApiResponse<TripScheduleWithLocationResponse>> getTripSchedules(
             @Parameter(description = "여행 ID", required = true)
             @PathVariable Long tripId,
 
@@ -108,7 +109,7 @@ public class ScheduleController {
 
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TripScheduleResponse response = scheduleService.getTripSchedules(
+        TripScheduleWithLocationResponse response = scheduleService.getTripSchedulesWithLocation(
                 tripId,
                 dayNumber,
                 userPrincipal.getUserId()
@@ -322,7 +323,9 @@ public class ScheduleController {
     @PostMapping("/trips/{tripId}/schedules/batch-update")
     @Operation(
             summary = "일정 일괄 수정",
-            description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다."
+            description = "여러 일정 변경사항을 한 번에 적용하고 DB에 저장합니다. " +
+                    "이동시간은 프론트엔드에서 계산하여 UPDATE_TRAVEL_TIME 타입으로 전달해야 합니다. " +
+                    "routes API는 자동으로 호출되지 않으며, arrival/departure 시간은 전달받은 이동시간을 기반으로 재계산됩니다."
     )
     public ResponseEntity<ApiResponse<TripScheduleResponse>> batchUpdateSchedule(
             @Parameter(description = "여행 ID", required = true)

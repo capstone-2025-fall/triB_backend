@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "일정 항목 응답")
-public class ScheduleItemResponse {
+@Schema(description = "일정 항목 응답 (위경도 포함)")
+public class ScheduleItemWithLocationResponse {
 
     @Schema(description = "일정 ID", example = "1")
     private Long scheduleId;
@@ -40,4 +40,10 @@ public class ScheduleItemResponse {
 
     @Schema(description = "방문 완료 여부", example = "false")
     private Boolean isVisit;
+
+    @Schema(description = "위도", example = "37.5796")
+    private Double latitude;
+
+    @Schema(description = "경도", example = "126.9770")
+    private Double longitude;
 }
