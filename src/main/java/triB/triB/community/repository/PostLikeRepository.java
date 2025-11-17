@@ -31,4 +31,25 @@ public interface PostLikeRepository extends JpaRepository<PostLike, PostLikeId> 
     @Query("select p from PostLike pl join pl.post p left join fetch p.trip t left join fetch t.room join fetch p.user " +
             "where pl.user.userId = :userId and p.postType = :postType order by pl.createdAt desc")
     List<Post> findPostByUser_UserIdAndPostTypeOrderByIdDesc(@Param("userId") Long userId, @Param("postType") PostType postType);
+
+
+        /**
+     * 일정 공유 게시판 좋아요 목록 조회 (Room 정보 포함)
+     */
+    @Query("select p from PostLike pl join pl.post p " +
+            "left join fetch p.trip t " +
+            "left join fetch t.room " +
+            "join fetch p.user " +
+            "where pl.user.userId = :userId and p.postType = 'TRIP_SHARE' " +
+            "order by pl.createdAt desc")
+    List<Post> findTripShareLikedPosts(@Param("userId") Long userId);
+
+    /**
+     * 자유게시판 좋아요 목록 조회 (Room 정보 불필요)
+     */
+    @Query("select p from PostLike pl join pl.post p " +
+            "join fetch p.user " +
+            "where pl.user.userId = :userId and p.postType = 'FREE_BOARD' " +
+            "order by pl.createdAt desc")
+    List<Post> findFreeBoardLikedPosts(@Param("userId") Long userId);
 }

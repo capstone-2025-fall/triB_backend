@@ -19,6 +19,7 @@ import triB.triB.schedule.dto.RepresentativeTripResponse;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.TripScheduleWithLocationResponse;
 import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.UpdateVisitTimeRequest;
@@ -99,7 +100,7 @@ public class ScheduleController {
             summary = "여행 일정 조회",
             description = "특정 여행의 특정 날짜 일정을 조회합니다. dayNumber를 지정하지 않으면 1일차를 반환합니다."
     )
-    public ResponseEntity<ApiResponse<TripScheduleResponse>> getTripSchedules(
+    public ResponseEntity<ApiResponse<TripScheduleWithLocationResponse>> getTripSchedules(
             @Parameter(description = "여행 ID", required = true)
             @PathVariable Long tripId,
 
@@ -108,7 +109,7 @@ public class ScheduleController {
 
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TripScheduleResponse response = scheduleService.getTripSchedules(
+        TripScheduleWithLocationResponse response = scheduleService.getTripSchedulesWithLocation(
                 tripId,
                 dayNumber,
                 userPrincipal.getUserId()

@@ -39,7 +39,13 @@ public class UserCommunityService {
 
     public List<PostResponse> getLikePosts(Long userId, PostType postType) {
         log.debug("유저가 좋아요 누른 게시글 조회 시작");
-        List<Post> posts = postLikeRepository.findPostByUser_UserIdAndPostTypeOrderByIdDesc(userId, postType);
+        
+        List<Post> posts;
+        if (postType == PostType.TRIP_SHARE) {
+            posts = postLikeRepository.findTripShareLikedPosts(userId);
+        } else {
+            posts = postLikeRepository.findFreeBoardLikedPosts(userId);
+        }
         if (posts.isEmpty()) {
             return List.of();
         }

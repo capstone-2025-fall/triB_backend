@@ -15,8 +15,10 @@ import triB.triB.schedule.dto.ModificationType;
 import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.ScheduleItemResponse;
+import triB.triB.schedule.dto.ScheduleItemWithLocationResponse;
 import triB.triB.schedule.dto.ScheduleModificationItem;
 import triB.triB.schedule.dto.TripScheduleResponse;
+import triB.triB.schedule.dto.TripScheduleWithLocationResponse;
 import triB.triB.schedule.dto.UpdateAccommodationRequest;
 import triB.triB.schedule.dto.UpdateStayDurationRequest;
 import triB.triB.schedule.dto.UpdateVisitTimeRequest;
@@ -92,6 +94,46 @@ public class ScheduleService {
 
         // TripScheduleResponse 생성 및 반환
         return TripScheduleResponse.builder()
+                .tripId(trip.getTripId())
+                .destination(trip.getDestination())
+                .startDate(room.getStartDate())
+                .endDate(room.getEndDate())
+                .currentDay(targetDayNumber)
+                .schedules(scheduleItems)
+                .budget(trip.getBudget())
+                .build();
+    }
+
+
+    /**
+     * 특정 여행의 특정 날짜 일정 조회 (위경도 포함)
+     */
+    public TripScheduleWithLocationResponse getTripSchedulesWithLocation(Long tripId, Integer dayNumber, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // dayNumber가 null이면 기본값 1 사용
+        Integer targetDayNumber = (dayNumber != null) ? dayNumber : 1;
+
+        // Trip 조회
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+        // Room 조회 (startDate, endDate 획득)
+        Room room = roomRepository.findById(trip.getRoomId())
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+        // 특정 날짜의 일정 조회
+        List<Schedule> schedules = scheduleRepository.findByTripIdAndDayNumber(tripId, targetDayNumber);
+
+        // Schedule 리스트를 ScheduleItemWithLocationResponse로 매핑 (visitOrder 순으로 정렬)
+        List<ScheduleItemWithLocationResponse> scheduleItems = schedules.stream()
+                .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                .map(this::mapToScheduleItemWithLocationResponse)
+                .collect(Collectors.toList());
+
+        // TripScheduleWithLocationResponse 생성 및 반환
+        return TripScheduleWithLocationResponse.builder()
                 .tripId(trip.getTripId())
                 .destination(trip.getDestination())
                 .startDate(room.getStartDate())
@@ -887,6 +929,25 @@ public class ScheduleService {
                 .travelTime(schedule.getTravelTime())
                 .visitOrder(schedule.getVisitOrder())
                 .isVisit(schedule.getIsVisit())
+                .build();
+    }
+
+
+    /**
+     * Schedule 엔티티를 ScheduleItemWithLocationResponse로 매핑 (위경도 포함)
+     */
+    private ScheduleItemWithLocationResponse mapToScheduleItemWithLocationResponse(Schedule schedule) {
+        return ScheduleItemWithLocationResponse.builder()
+                .scheduleId(schedule.getScheduleId())
+                .displayName(schedule.getPlaceName())
+                .arrival(schedule.getArrival())
+                .departure(schedule.getDeparture())
+                .placeTag(schedule.getPlaceTag())
+                .travelTime(parseTravelTimeToMinutes(schedule.getTravelTime()))
+                .visitOrder(schedule.getVisitOrder())
+                .isVisit(schedule.getIsVisit())
+                .latitude(schedule.getLatitude())
+                .longitude(schedule.getLongitude())
                 .build();
     }
 
