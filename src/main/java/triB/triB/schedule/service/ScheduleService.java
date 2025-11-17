@@ -104,7 +104,6 @@ public class ScheduleService {
                 .build();
     }
 
-
     /**
      * 특정 여행의 특정 날짜 일정 조회 (위경도 포함)
      */
@@ -864,7 +863,7 @@ public class ScheduleService {
 
     /**
      * travelTime 문자열을 분 단위로 파싱
-     * 예: "30분" -> 30, "1시간 30분" -> 90, "2시간" -> 120
+     * 예: "30분" -> 30, "1시간 30분" -> 90, "2시간" -> 120, "30" -> 30 (백워드 호환)
      */
     private Integer parseTravelTimeToMinutes(String travelTimeText) {
         if (travelTimeText == null || travelTimeText.isEmpty()) {
@@ -891,12 +890,38 @@ public class ScheduleService {
                 // "분"만 있는 경우
                 String minutePart = travelTimeText.replace("분", "").trim();
                 totalMinutes = Integer.parseInt(minutePart);
+            } else {
+                // 숫자만 있는 경우 (백워드 호환성을 위해 분 단위로 간주)
+                totalMinutes = Integer.parseInt(travelTimeText.trim());
             }
 
             return totalMinutes;
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    /**
+     * 분 단위 숫자를 한국어 형식 문자열로 변환
+     * 예: 30 -> "30분", 90 -> "1시간 30분", 120 -> "2시간"
+     */
+    private String convertMinutesToKoreanFormat(Integer minutes) {
+        if (minutes == null || minutes == 0) {
+            return "0분";
+        }
+
+        if (minutes < 60) {
+            return minutes + "분";
+        }
+
+        int hours = minutes / 60;
+        int remainingMinutes = minutes % 60;
+
+        if (remainingMinutes == 0) {
+            return hours + "시간";
+        }
+
+        return hours + "시간 " + remainingMinutes + "분";
     }
 
     /**
@@ -926,12 +951,11 @@ public class ScheduleService {
                 .arrival(schedule.getArrival())
                 .departure(schedule.getDeparture())
                 .placeTag(schedule.getPlaceTag())
-                .travelTime(schedule.getTravelTime())
+                .travelTime(parseTravelTimeToMinutes(schedule.getTravelTime()))
                 .visitOrder(schedule.getVisitOrder())
                 .isVisit(schedule.getIsVisit())
                 .build();
     }
-
 
     /**
      * Schedule 엔티티를 ScheduleItemWithLocationResponse로 매핑 (위경도 포함)
@@ -1003,39 +1027,144 @@ public class ScheduleService {
                     deleteSchedule(tripId, m.getScheduleId(), userId);
                 });
 
-        // 2. ADD 적용
+        // 2. ADD 적용 (batch-update용: routes API 호출 없이 기본 일정만 생성)
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.ADD)
                 .forEach(m -> {
-                    AddScheduleRequest addRequest = AddScheduleRequest.builder()
+                    // Trip 조회
+                    Trip trip = tripRepository.findById(tripId)
+                            .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+                    // Room 조회 (날짜 계산용)
+                    Room room = roomRepository.findById(trip.getRoomId())
+                            .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+
+                    // 날짜 계산: startDate + (dayNumber - 1)
+                    LocalDate scheduleDate = room.getStartDate().plusDays(m.getDayNumber() - 1);
+
+                    // 해당 날짜의 기존 일정 조회
+                    List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, m.getDayNumber())
+                            .stream()
+                            .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                            .collect(Collectors.toList());
+
+                    // 마지막 visitOrder 확인 (숙소 제외)
+                    Integer newVisitOrder;
+                    Schedule lastNonAccommodationSchedule = null;
+
+                    if (daySchedules.isEmpty()) {
+                        newVisitOrder = 1;
+                    } else {
+                        for (int i = daySchedules.size() - 1; i >= 0; i--) {
+                            if (daySchedules.get(i).getPlaceTag() != PlaceTag.HOME) {
+                                lastNonAccommodationSchedule = daySchedules.get(i);
+                                break;
+                            }
+                        }
+
+                        if (lastNonAccommodationSchedule != null) {
+                            newVisitOrder = lastNonAccommodationSchedule.getVisitOrder() + 1;
+                        } else {
+                            newVisitOrder = daySchedules.size() + 1;
+                        }
+                    }
+
+                    // arrival/departure 시간 설정
+                    LocalDateTime newArrival;
+                    LocalDateTime newDeparture;
+
+                    if (lastNonAccommodationSchedule != null) {
+                        // 이전 일정의 departure를 사용 (travelTime은 UPDATE_TRAVEL_TIME으로 설정 예정)
+                        newArrival = lastNonAccommodationSchedule.getDeparture();
+                        newDeparture = newArrival.plusMinutes(m.getStayMinutes());
+                    } else {
+                        // 첫 번째 일정인 경우: 기본 시작 시간 설정 (오전 9시)
+                        newArrival = scheduleDate.atTime(9, 0);
+                        newDeparture = newArrival.plusMinutes(m.getStayMinutes());
+                    }
+
+                    // 새로운 Schedule 엔티티 생성
+                    Schedule newSchedule = Schedule.builder()
+                            .tripId(tripId)
                             .dayNumber(m.getDayNumber())
+                            .date(scheduleDate)
+                            .visitOrder(newVisitOrder)
                             .placeName(m.getPlaceName())
                             .placeTag(m.getPlaceTag())
                             .latitude(m.getLatitude())
                             .longitude(m.getLongitude())
-                            .stayMinutes(m.getStayMinutes())
+                            .isVisit(false)
+                            .arrival(newArrival)
+                            .departure(newDeparture)
+                            .travelTime(null) // routes API 호출하지 않음, UPDATE_TRAVEL_TIME으로 설정 예정
                             .build();
-                    addScheduleToDay(tripId, addRequest, userId);
+
+                    // 새 일정 저장
+                    scheduleRepository.save(newSchedule);
+
+                    // 새 일정의 visitOrder보다 크거나 같은 기존 일정들의 visitOrder를 +1 증가
+                    for (Schedule schedule : daySchedules) {
+                        if (schedule.getVisitOrder() >= newVisitOrder) {
+                            schedule.setVisitOrder(schedule.getVisitOrder() + 1);
+                        }
+                    }
                 });
 
-        // 3. REORDER 적용
+        // 3. REORDER 적용 (batch-update용: routes API 호출 없이 순서만 변경)
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.REORDER)
                 .forEach(m -> {
-                    ReorderScheduleRequest reorderRequest = new ReorderScheduleRequest(m.getNewVisitOrder());
-                    reorderSchedule(tripId, m.getScheduleId(), reorderRequest, userId);
+                    // Schedule 조회
+                    Schedule targetSchedule = scheduleRepository.findByScheduleIdAndTripId(m.getScheduleId(), tripId)
+                            .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+                    Integer currentOrder = targetSchedule.getVisitOrder();
+                    Integer newOrder = m.getNewVisitOrder();
+
+                    // 같은 순서면 스킵
+                    if (currentOrder.equals(newOrder)) {
+                        return;
+                    }
+
+                    // 해당 날짜의 모든 일정 조회 (visitOrder 순으로 정렬)
+                    List<Schedule> daySchedules = scheduleRepository.findByTripIdAndDayNumber(tripId, dayNumber)
+                            .stream()
+                            .sorted(Comparator.comparing(Schedule::getVisitOrder))
+                            .collect(Collectors.toList());
+
+                    // 새로운 순서가 유효한지 검증
+                    if (newOrder < 1 || newOrder > daySchedules.size()) {
+                        throw new IllegalArgumentException("유효하지 않은 방문 순서입니다. (1-" + daySchedules.size() + " 사이여야 합니다)");
+                    }
+
+                    // 순서 변경 로직
+                    daySchedules.removeIf(s -> s.getScheduleId().equals(m.getScheduleId()));
+                    daySchedules.add(newOrder - 1, targetSchedule);
+
+                    // 모든 일정의 visitOrder 재정렬
+                    for (int i = 0; i < daySchedules.size(); i++) {
+                        daySchedules.get(i).setVisitOrder(i + 1);
+                    }
+                    // 주의: recalculateDayTravelTimes 호출하지 않음 (routes API 호출 방지)
                 });
 
-        // 4. UPDATE_ACCOMMODATION 적용
+        // 4. UPDATE_ACCOMMODATION 적용 (batch-update용: routes API 호출 없이 위치만 변경)
         modifications.stream()
                 .filter(m -> m.getModificationType() == ModificationType.UPDATE_ACCOMMODATION)
                 .forEach(m -> {
-                    updateAccommodationByScheduleId(
-                            m.getScheduleId(),
-                            m.getPlaceName(),
-                            m.getLatitude(),
-                            m.getLongitude()
-                    );
+                    // Schedule 조회 및 PlaceTag.HOME 검증
+                    Schedule accommodation = scheduleRepository.findById(m.getScheduleId())
+                            .orElseThrow(() -> new IllegalArgumentException("해당 일정을 찾을 수 없습니다."));
+
+                    if (accommodation.getPlaceTag() != PlaceTag.HOME) {
+                        throw new IllegalArgumentException("숙소(PlaceTag.HOME)만 변경할 수 있습니다.");
+                    }
+
+                    // 숙소 정보 업데이트 (위치만 변경, travelTime은 UPDATE_TRAVEL_TIME으로 처리)
+                    accommodation.setPlaceName(m.getPlaceName());
+                    accommodation.setLatitude(m.getLatitude());
+                    accommodation.setLongitude(m.getLongitude());
+                    // 주의: routes API 호출하지 않음
                 });
 
         // 5. UPDATE_VISIT_TIME 적용
@@ -1053,6 +1182,21 @@ public class ScheduleService {
                     UpdateStayDurationRequest updateDurationRequest = new UpdateStayDurationRequest(m.getStayMinutes());
                     updateStayDuration(tripId, m.getScheduleId(), updateDurationRequest, userId);
                 });
+
+        // 7. UPDATE_TRAVEL_TIME 적용
+        modifications.stream()
+                .filter(m -> m.getModificationType() == ModificationType.UPDATE_TRAVEL_TIME)
+                .forEach(m -> {
+                    Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(m.getScheduleId(), tripId)
+                            .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+                    // 프론트엔드에서 전달받은 분 단위 이동시간을 한국어 형식으로 변환하여 업데이트
+                    String travelTimeKorean = convertMinutesToKoreanFormat(m.getTravelTime());
+                    schedule.setTravelTime(travelTimeKorean);
+                });
+
+        // 8. 모든 변경사항 적용 후 departure/arrival 시간 재계산
+        recalculateDepartureTimes(tripId, dayNumber);
 
         // 최종 결과 조회 및 반환
         return getTripSchedules(tripId, dayNumber, userId);

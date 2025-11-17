@@ -20,6 +20,7 @@ import java.time.LocalTime;
  *   <li><strong>REORDER:</strong> scheduleId, newVisitOrder</li>
  *   <li><strong>UPDATE_STAY_DURATION:</strong> scheduleId, stayMinutes</li>
  *   <li><strong>UPDATE_VISIT_TIME:</strong> scheduleId, newArrivalTime</li>
+ *   <li><strong>UPDATE_TRAVEL_TIME:</strong> scheduleId, travelTime</li>
  *   <li><strong>ADD:</strong> dayNumber, placeName, placeTag, latitude, longitude, stayMinutes</li>
  *   <li><strong>DELETE:</strong> scheduleId</li>
  *   <li><strong>UPDATE_ACCOMMODATION:</strong> scheduleId, placeName, latitude, longitude (기존 숙소만 변경 가능)</li>
@@ -37,8 +38,8 @@ public class ScheduleModificationItem {
     @NotNull(message = "변경 타입은 필수입니다.")
     private ModificationType modificationType;
 
-    // ===== REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE, UPDATE_ACCOMMODATION에 사용 =====
-    @Schema(description = "일정 ID (REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, DELETE, UPDATE_ACCOMMODATION용)", example = "1")
+    // ===== REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, UPDATE_TRAVEL_TIME, DELETE, UPDATE_ACCOMMODATION에 사용 =====
+    @Schema(description = "일정 ID (REORDER, UPDATE_STAY_DURATION, UPDATE_VISIT_TIME, UPDATE_TRAVEL_TIME, DELETE, UPDATE_ACCOMMODATION용)", example = "1")
     private Long scheduleId;
 
     // ===== REORDER에 사용 =====
@@ -72,4 +73,9 @@ public class ScheduleModificationItem {
 
     @Schema(description = "경도 (ADD, UPDATE_ACCOMMODATION용)", example = "126.9882")
     private Double longitude;
+
+    // ===== UPDATE_TRAVEL_TIME에 사용 =====
+    @Schema(description = "이동시간 분 단위 (UPDATE_TRAVEL_TIME용)", example = "30")
+    @Positive(message = "이동시간은 1분 이상이어야 합니다.")
+    private Integer travelTime;
 }

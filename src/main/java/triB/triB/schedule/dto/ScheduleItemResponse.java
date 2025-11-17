@@ -32,8 +32,8 @@ public class ScheduleItemResponse {
     @Schema(description = "장소 태그", example = "TOURIST_SPOT")
     private PlaceTag placeTag;
 
-    @Schema(description = "다음 장소까지의 이동 시간", example = "30분")
-    private String travelTime;
+    @Schema(description = "다음 장소까지의 이동 시간 (분 단위)", example = "30")
+    private Integer travelTime;
 
     @Schema(description = "방문 순서", example = "1")
     private Integer visitOrder;
