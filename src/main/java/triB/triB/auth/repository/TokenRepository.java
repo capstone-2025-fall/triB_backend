@@ -15,4 +15,6 @@ public interface TokenRepository extends JpaRepository<Token, Long> {
 
     @Query("select t from Token t where t.user.userId = :userId and t.user.isAlarm = :isAlarm")
     Token findByUser_UserIdAndUser_IsAlarm(@Param("userId") Long userId, @Param("isAlarm") IsAlarm isAlarm);
+
+    List<Token> findAllByUser_UserIdInAndUser_IsAlarm(List<Long> userIds, IsAlarm isAlarm);
 }

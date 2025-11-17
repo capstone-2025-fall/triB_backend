@@ -23,6 +23,8 @@ import triB.triB.chat.repository.MessageBookmarkRepository;
 import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
+import triB.triB.community.entity.Post;
+import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.global.exception.CustomException;
 import triB.triB.global.exception.ErrorCode;
@@ -64,6 +66,7 @@ public class ChatService {
     private final TripRepository tripRepository;
     private final RedisClient redisClient;
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -152,17 +155,29 @@ public class ChatService {
                 place = messagePlaceRepository.findByMessage_MessageId(message.getMessageId());
                 bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
 
+                String content = message.getContent();
                 // 장소 태그가 저장 되어있고 북마크 되어있음
                 if (place != null && bookmark != null)
-                    mustVisit.add(message.getContent());
+                    mustVisit.add(content);
                     // 장소태그만 저장되어있음
                 else if (place != null)
-                    places.add(new ModelRequest.ModelPlaceRequest(message.getContent(), place.getPlaceTag()));
+                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
                     // 북마크만 되어있음
                 else if (bookmark != null)
-                    rule.add(message.getContent());
+                    rule.add(content);
 
-                chat.add(message.getContent());
+                // 커뮤니티에서 가져온 일정인 경우
+                if (message.getMessageType().equals(MessageType.COMMUNITY_SHARE)){
+                    Post p = postRepository.findById(Long.parseLong(content))
+                            .orElseThrow(() -> new EntityNotFoundException("해당 게시글이 존재하지 않습니다."));
+                    Long tripId = p.getTripId();
+
+                    scheduleRepository.findByTripIdOrderByDayNumberAscVisitOrderAsc(tripId).stream()
+                            .filter(s -> s.getPlaceTag() != PlaceTag.HOME)
+                            .forEach(s -> places.add(new ModelRequest.ModelPlaceRequest(s.getPlaceName(), s.getPlaceTag())));
+                } else {
+                    chat.add(content);
+                }
             }
 
             ModelRequest modelRequest = ModelRequest.builder()

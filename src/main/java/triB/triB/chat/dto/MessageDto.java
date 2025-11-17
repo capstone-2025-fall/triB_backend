@@ -18,4 +18,5 @@ public class MessageDto {
     private PlaceTag tag;
     private Boolean isBookmarked;
     private PlaceDetail placeDetail;
+    private CommunityDetail communityDetail;
 }
