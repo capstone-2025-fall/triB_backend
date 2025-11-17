@@ -23,8 +23,7 @@ import java.util.List;
                 @Index(name = "idx_posts_user_created", columnList = "user_id, created_at DESC"),
                 @Index(name = "idx_posts_type_created_desc", columnList = "post_type, created_at DESC"),
                 @Index(name = "idx_posts_type_likes", columnList = "post_type, likes_count DESC, post_id"),
-                @Index(name = "idx_posts_type_comments", columnList = "post_type, comments_count DESC, post_id"),
-                @Index(name = "idx_posts_user", columnList = "user_id")
+                @Index(name = "idx_posts_type_comments", columnList = "post_type, comments_count DESC, post_id")
         }
 )
 public class Post {
