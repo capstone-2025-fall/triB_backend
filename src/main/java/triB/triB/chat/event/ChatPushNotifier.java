@@ -53,8 +53,8 @@ public class ChatPushNotifier {
 
             if (tokens.isEmpty()) return;
 
-            String roomName = room.getRoomName() + "\n"+ e.nickname();
-            String content = e.content();
+            String roomName = room.getRoomName();
+            String content = "👤"+ e.nickname() +"\n"+ e.content();
             String image = e.photoUrl();
 
             for (Token t : tokens) {

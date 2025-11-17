@@ -39,4 +39,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     Post findTopByPostTypeAndCreatedAtAfterOrderByLikesCountDescCommentsCountDesc(
             @Param("postType") PostType postType,
             @Param("date") LocalDateTime date);
+
+    @Query("select p.title from Post p where p.postId = :postId")
+    String findTitleByPostId(@Param("postId") Long postId);
 }
