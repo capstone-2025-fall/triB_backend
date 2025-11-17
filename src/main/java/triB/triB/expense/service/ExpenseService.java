@@ -308,13 +308,8 @@ public class ExpenseService {
         // UserRoom에서 해당 Room의 모든 참여자 조회
         List<User> participants = userRoomRepository.findUsersByRoomId(roomId);
 
-        // 로그인한 사용자를 맨 앞으로, 나머지는 nickname 순서 유지
+        // DTO로 변환 (userId와 닉네임 포함)
         return participants.stream()
-                .sorted((u1, u2) -> {
-                    if (u1.getUserId().equals(userId)) return -1;
-                    if (u2.getUserId().equals(userId)) return 1;
-                    return 0; // 기존 정렬 유지
-                })
                 .map(user -> TripParticipantResponse.builder()
                         .userId(user.getUserId())
                         .nickname(user.getNickname())
