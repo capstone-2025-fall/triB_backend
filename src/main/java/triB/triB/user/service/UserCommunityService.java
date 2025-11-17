@@ -47,6 +47,7 @@ public class UserCommunityService {
     }
 
     private List<PostResponse> getPosts(List<Post> posts){
+        log.debug("게시글 조회");
         List<Long> postIds = posts.stream().map(Post::getPostId).toList();
         Map<Long, User> userMap = posts.stream()
                 .map(Post::getUser)
