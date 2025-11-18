@@ -156,31 +156,34 @@ public class ChatService {
                 bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
 
                 String content = message.getContent();
-                // 장소 태그가 저장 되어있고 북마크 되어있음
-                if (place != null && bookmark != null)
-                    mustVisit.add(content);
-                    // 장소태그만 저장되어있음
-                else if (place != null)
-                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
-                    // 북마크만 되어있음
-                else if (bookmark != null)
-                    rule.add(content);
 
-                // 커뮤니티에서 가져온 일정인 경우
                 if (message.getMessageType().equals(MessageType.COMMUNITY_SHARE)){
                     Post p = postRepository.findById(Long.parseLong(content))
                             .orElseThrow(() -> new EntityNotFoundException("해당 게시글이 존재하지 않습니다."));
                     Long tripId = p.getTripId();
 
-                    scheduleRepository.findByTripIdOrderByDayNumberAscVisitOrderAsc(tripId).stream()
+                    List<Schedule> schedules = scheduleRepository.findByTripIdOrderByDayNumberAscVisitOrderAsc(tripId).stream()
                             .filter(s -> s.getPlaceTag() != PlaceTag.HOME)
-                            .forEach(s -> places.add(new ModelRequest.ModelPlaceRequest(s.getPlaceName(), s.getPlaceTag())));
-                } else {
-                    chat.add(content);
-                }
-            }
+                            .toList();
 
-            log.info("places: {}", places);
+                    schedules.forEach(s ->
+                            places.add(new ModelRequest.ModelPlaceRequest(s.getPlaceName(), s.getPlaceTag())));
+
+                } // 장소 태그가 저장 되어있고 북마크 되어있음
+                else if (place != null && bookmark != null){
+                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
+                    mustVisit.add(content);
+                } // 장소태그만 저장되어있음
+                else if (place != null) {
+                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
+                } // 북마크만 되어있음
+                else if (bookmark != null) {
+                    rule.add(content);
+                }
+                // 커뮤니티가 아닌 메세지의 경우 싹다 chat에 넣음
+                if (!message.getMessageType().equals(MessageType.COMMUNITY_SHARE))
+                    chat.add(content);
+            }
 
             ModelRequest modelRequest = ModelRequest.builder()
                     .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
@@ -192,6 +195,8 @@ public class ChatService {
                     .rule(rule)
                     .chat(chat)
                     .build();
+
+            log.info("places: {}", places);
 
             log.info("모델 통신 시작");
             return aiModelWebClient.post()
