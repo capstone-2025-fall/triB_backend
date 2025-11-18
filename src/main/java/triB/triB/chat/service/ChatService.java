@@ -141,7 +141,9 @@ public class ChatService {
         }
 
         try {
-            List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId);
+            List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId).stream()
+                    .filter(m -> m.getMessageStatus() != MessageStatus.DELETE)
+                    .toList();
 
             List<ModelRequest.ModelPlaceRequest> places = new ArrayList<>();
             List<String> mustVisit = new ArrayList<>();
