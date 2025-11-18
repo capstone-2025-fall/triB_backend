@@ -47,6 +47,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String passwordCharPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ?%!#*";
 
 
     public void sendCodeToEmail(String email) {
@@ -209,5 +210,39 @@ public class AuthService {
         if (str == null)
             throw new EntityNotFoundException("해당 키가 존재하지 않습니다. 다시 로그인해주세요");
         return objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
+    }
+
+    public void sendPasswordToEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 이메일입니다."));
+
+        String title = "TriB 임시 비밀번호 생성";
+        log.info("전송해야될 메일: {}", email);
+
+        if (redisClient.getData("ev", email) != null)
+            redisClient.deleteData("ev",email);
+
+        String temporaryPassword = createTemporaryPassword();
+        log.info("생성된 임시 비밀번호: {}", temporaryPassword);
+        user.setPassword(passwordEncoder.encode(temporaryPassword));
+        userRepository.save(user);
+
+        String content = MailTemplate.newPassword(temporaryPassword);
+        mailService.sendEmail(email, title, content);
+    }
+
+    public String createTemporaryPassword(){
+        int length = 8;
+        try {
+            SecureRandom sr = SecureRandom.getInstanceStrong();
+            StringBuilder code = new StringBuilder();
+            for (int i = 0; i < length; i++) {
+                int index = sr.nextInt(passwordCharPool.length());
+                code.append(passwordCharPool.charAt(index));
+            }
+            return code.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("임시 비밀번호 생성을 실패했습니다.");
+        }
     }
 }
