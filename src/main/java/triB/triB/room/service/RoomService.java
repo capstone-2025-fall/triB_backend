@@ -112,6 +112,7 @@ public class RoomService {
             throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
         }
         userRoom.setRoomStatus(RoomStatus.EXIT);
+        userRoomRepository.save(userRoom);
     }
 
     @Transactional
@@ -154,12 +155,13 @@ public class RoomService {
 
         for (Long id : userIds) {
             UserRoom ur;
-            if ((ur = userRoomRepository.findByUser_UserIdAndRoom_RoomId(id, roomId)) != null){
-                if (!ur.getRoomStatus().equals(RoomStatus.EXIT))
-                    throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
-                else{
+            if ((ur = userRoomRepository.findByUserIdAndRoomIdWithoutFilter(id, roomId)) != null){
+                if (ur.getRoomStatus().equals(RoomStatus.EXIT)){
                     ur.setRoomStatus(RoomStatus.ACTIVE);
                     userRoomRepository.save(ur);
+                }
+                else {
+                    throw new DataIntegrityViolationException("이미 초대된 유저입니다.");
                 }
             } else {
                 User user = userRepository.findById(id)
@@ -168,6 +170,7 @@ public class RoomService {
                 UserRoom ur2 = UserRoom.builder()
                         .user(user)
                         .room(room)
+                        .roomStatus(RoomStatus.ACTIVE)
                         .build();
                 userRoomRepository.save(ur2);
             }
