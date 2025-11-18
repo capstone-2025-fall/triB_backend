@@ -180,8 +180,7 @@ public class ChatService {
                 }
             }
 
-            ObjectMapper mapper = new ObjectMapper();
-            log.info("places: {}", mapper.writeValueAsString(places));
+            log.info("places: {}", places);
 
             ModelRequest modelRequest = ModelRequest.builder()
                     .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
