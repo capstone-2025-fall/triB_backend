@@ -266,12 +266,12 @@ public class RoomService {
             String content = null;
             if (msg != null) {
                 if (msg.getMessageStatus() != MessageStatus.DELETE) {
-                    content = msg.getContent();
+                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE)
+                        content = postRepository.findTitleByPostId(Long.parseLong(msg.getContent()));
+                    else
+                        content = msg.getContent();
                 } else {
                     content = "삭제된 메세지입니다.";
-                }
-                if (msg.getMessageType() == MessageType.COMMUNITY_SHARE){
-                    content = postRepository.findTitleByPostId(Long.parseLong(msg.getContent()));
                 }
             }
             RoomsResponse response = RoomsResponse.builder()
