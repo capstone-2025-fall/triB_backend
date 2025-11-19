@@ -319,4 +319,40 @@ public class PostService {
             throw new CustomException(ErrorCode.USER_NOT_IN_TRIP);
         }
     }
+
+    /**
+     * 게시글 삭제
+     * - 작성자 본인만 삭제 가능
+     * - S3 이미지 파일 삭제
+     * - Post 삭제 시 cascade로 연관 엔티티 자동 삭제 (PostImage, Comment, PostLike, PostHashtag)
+     *
+     * @param postId 삭제할 게시글 ID
+     * @param userId 현재 로그인한 사용자 ID
+     * @throws CustomException POST_NOT_FOUND - 게시글이 존재하지 않음
+     * @throws CustomException UNAUTHORIZED_POST_ACCESS - 작성자가 아님
+     */
+    @Transactional
+    public void deletePost(Long postId, Long userId) {
+        // 1. Post 조회 및 존재 확인
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        // 2. 작성자 권한 검증
+        if (!post.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_POST_ACCESS);
+        }
+
+        // 3. S3에 업로드된 이미지 파일 삭제
+        List<PostImage> images = postImageRepository.findByPostIdOrderByDisplayOrderAsc(postId);
+        for (PostImage image : images) {
+            awsS3Client.delete(image.getImageUrl());
+        }
+
+        // 4. Post 삭제 (cascade로 연관 엔티티 자동 삭제)
+        // - PostImage (cascade ALL, orphanRemoval)
+        // - Comment (cascade ALL, orphanRemoval) - 대댓글 포함
+        // - PostLike (cascade ALL, orphanRemoval)
+        // - PostHashtag (cascade ALL, orphanRemoval)
+        postRepository.delete(post);
+    }
 }

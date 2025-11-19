@@ -235,4 +235,24 @@ public class PostController {
 
         return ApiResponse.ok("일정을 조회했습니다.", response);
     }
+
+    @Operation(
+            summary = "게시글 삭제",
+            description = """
+                    게시글을 삭제합니다.
+                    - 작성자 본인만 삭제할 수 있습니다.
+                    - 게시글과 함께 연관된 이미지, 댓글, 좋아요, 해시태그도 모두 삭제됩니다.
+                    - S3에 업로드된 이미지 파일도 함께 삭제됩니다.
+                    """
+    )
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        Long userId = userPrincipal.getUserId();
+        postService.deletePost(postId, userId);
+
+        return ApiResponse.ok("게시글이 삭제되었습니다.", null);
+    }
 }
