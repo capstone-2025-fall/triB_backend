@@ -26,6 +26,9 @@ public class TripListResponse {
     @Schema(description = "여행 목적지", example = "서울")
     private String destination;
 
+    @Schema(description = "채팅방 이름", example = "부산 여행방")
+    private String roomName;
+
     @Schema(description = "여행 시작 날짜", example = "2025-01-01")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;

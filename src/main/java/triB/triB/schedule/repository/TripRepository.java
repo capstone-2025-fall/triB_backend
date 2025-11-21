@@ -22,7 +22,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param tripStatus 여행 상태 (ACCEPTED, READY 등)
      * @return 여행 목록 (최신순)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE t.tripStatus = :tripStatus " +
            "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
@@ -46,7 +46,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param tripStatus 여행 상태
      * @return 미래 여행 목록 (시작일 오름차순)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE t.tripStatus = :tripStatus " +
            "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
@@ -59,7 +59,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param tripStatus 여행 상태
      * @return 과거 여행 목록 (시작일 내림차순)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE t.tripStatus = :tripStatus " +
            "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
@@ -72,7 +72,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param currentDate 현재 날짜
      * @return 진행 중인 여행 목록 (종료일 내림차순 - 가장 늦게 끝나는 것 우선)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE r.startDate <= :currentDate " +
            "AND r.endDate >= :currentDate " +
@@ -86,7 +86,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param currentDate 현재 날짜
      * @return 미래 여행 목록 (시작일 오름차순, 같으면 tripId 오름차순)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE r.startDate > :currentDate " +
            "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +
@@ -99,7 +99,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
      * @param currentDate 현재 날짜
      * @return 과거 여행 목록 (종료일 내림차순 - 가장 최근에 끝난 것 우선)
      */
-    @Query("SELECT DISTINCT t FROM Trip t " +
+    @Query("SELECT t FROM Trip t " +
            "JOIN t.room r " +
            "WHERE r.endDate < :currentDate " +
            "AND EXISTS (SELECT 1 FROM UserRoom ur WHERE ur.room.roomId = r.roomId AND ur.user.userId = :userId) " +

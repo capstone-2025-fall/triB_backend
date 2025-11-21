@@ -104,6 +104,7 @@ public class TripService {
         return TripListResponse.builder()
                 .tripId(trip.getTripId())
                 .destination(room.getDestination())
+                .roomName(room.getRoomName())
                 .startDate(room.getStartDate())
                 .endDate(room.getEndDate())
                 .participants(participantResponses)

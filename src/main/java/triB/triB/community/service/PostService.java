@@ -110,6 +110,9 @@ public class PostService {
                 .trip(trip)
                 .title(roomName)
                 .content(request.getContent())
+                .matchesPreferences(request.getMatchesPreferences())
+                .isPractical(request.getIsPractical())
+                .travelReview(request.getTravelReview())
                 .likesCount(0)
                 .commentsCount(0)
                 .build();
