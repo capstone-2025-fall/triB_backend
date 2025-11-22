@@ -283,7 +283,7 @@ public class RoomService {
                     .endDate(r.getEndDate())
                     .content(content)
                     .createdAt(r.getCreatedAt())
-                    .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0)) //todo 안 읽은 메세지 개수 세는 로직 필요 Entity 추가
+                    .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0))
                     .build();
             responses.add(response);
         }
