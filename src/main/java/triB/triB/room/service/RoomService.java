@@ -271,7 +271,10 @@ public class RoomService {
                     else
                         content = msg.getContent();
                 } else {
-                    content = "삭제된 메세지입니다.";
+                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE)
+                        content = "삭제된 게시글입니다.";
+                    else
+                        content = "삭제된 메세지입니다.";
                 }
             }
             RoomsResponse response = RoomsResponse.builder()
