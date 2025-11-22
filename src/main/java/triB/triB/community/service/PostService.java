@@ -6,6 +6,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.chat.entity.Message;
+import triB.triB.chat.entity.MessageStatus;
+import triB.triB.chat.entity.MessageType;
+import triB.triB.chat.repository.MessageRepository;
 import triB.triB.community.dto.HashtagResponse;
 import triB.triB.community.dto.request.FreeBoardPostCreateRequest;
 import triB.triB.community.dto.request.FreeBoardPostFilterRequest;
@@ -46,6 +50,7 @@ public class PostService {
     private final TripRepository tripRepository;
     private final UserRoomRepository userRoomRepository;
     private final AwsS3Client awsS3Client;
+    private final MessageRepository messageRepository;
     private final HashtagService hashtagService;
     private final ScheduleService scheduleService;
 
@@ -357,5 +362,14 @@ public class PostService {
         // - PostLike (cascade ALL, orphanRemoval)
         // - PostHashtag (cascade ALL, orphanRemoval)
         postRepository.delete(post);
+        changeMessageStatus(postId);
+    }
+
+    private void changeMessageStatus(Long postId){
+        List<Message> messages = messageRepository.findByMessageTypeAndContent(MessageType.COMMUNITY_SHARE, postId.toString());
+        messages.forEach(m -> {
+            m.setMessageStatus(MessageStatus.DELETE);
+            messageRepository.save(m);
+        });
     }
 }

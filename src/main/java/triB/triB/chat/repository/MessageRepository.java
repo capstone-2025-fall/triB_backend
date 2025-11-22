@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import triB.triB.auth.entity.User;
 import triB.triB.chat.entity.Message;
+import triB.triB.chat.entity.MessageType;
 
 import java.util.List;
 
@@ -28,4 +29,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             "where m.room.roomId in :roomIds and m.messageId > COALESCE(rs.lastReadMessageId, 0) " +
             "group by m.room.roomId")
     List<Object[]> countUnreadMessagesBatch(@Param("roomIds") List<Long> roomIds, @Param("userId") Long userId);
+
+    List<Message> findByMessageTypeAndContent(MessageType messageType, String content);
 }
