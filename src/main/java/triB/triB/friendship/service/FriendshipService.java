@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.friendship.dto.FriendRequest;
@@ -49,7 +50,7 @@ public class FriendshipService {
 
     public List<UserResponse> getMyFriends(Long userId){
 
-        List<User> friends = friendRepository.findAllFriendByUser(userId);
+        List<User> friends = friendRepository.findAllFriendByUserAndUserStatus(userId, UserStatus.ACTIVE);
         List<UserResponse> result = new ArrayList<>();
 
         friends.forEach(friend -> {
@@ -70,7 +71,7 @@ public class FriendshipService {
     }
 
     public List<UserResponse> searchMyFriends(Long userId, String nickname){
-        List<User> friends = friendRepository.findAllFriendByUserAndFriend_Nickname(userId, nickname);
+        List<User> friends = friendRepository.findAllFriendByUserAndFriend_NicknameAndUserStatus(userId, nickname, UserStatus.ACTIVE);
         List<UserResponse> result = new ArrayList<>();
 
         friends.forEach(friend -> {
@@ -148,7 +149,7 @@ public class FriendshipService {
 
     // 내게 온 요청 확인
     public List<FriendRequest> getMyRequests(Long userId){
-        List<Friendship> requests = friendshipRepository.findAllByAddressee_UserIdAndFriendshipStatusOrderByCreatedAtAsc(userId, FriendshipStatus.PENDING);
+        List<Friendship> requests = friendshipRepository.findAllByAddressee_UserIdAndFriendshipStatusAndUserStatusOrderByCreatedAtAsc(userId, FriendshipStatus.PENDING, UserStatus.ACTIVE);
         List<FriendRequest> result = new ArrayList<>();
 
         requests.forEach(friendship -> {

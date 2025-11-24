@@ -17,7 +17,10 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 
 import java.io.IOException;
 
@@ -48,6 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
            User user = userRepository.findById(userId)
                    .orElseThrow(()->new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
+           if (user.getUserStatus() == UserStatus.DELETED)
+               throw new CustomException(ErrorCode.INVALID_ACCESS);
            UserPrincipal userPrincipal = new UserPrincipal(user, user.getUserId(), user.getEmail(), user.getUsername(), user.getPassword());
            UsernamePasswordAuthenticationToken authentication
                    = new UsernamePasswordAuthenticationToken(userPrincipal, null, null);

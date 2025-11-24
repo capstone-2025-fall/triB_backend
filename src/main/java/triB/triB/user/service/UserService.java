@@ -141,11 +141,11 @@ public class UserService {
         redisClient.deleteData("rf", String.valueOf(userId));
         s3Client.delete(user.getPhotoUrl());
         user.setUserStatus(UserStatus.DELETED);
+        user.setNickname("(탈퇴한 사용자)");
         user.setEmail(null);
         user.setUsername(null);
         userRepository.save(user);
         log.info("user 상태변경 완료");
-
 
         log.info("userId = {} 인 유저가 탈퇴했습니다.", userId);
     }
