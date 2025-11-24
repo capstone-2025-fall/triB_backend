@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.global.fcm.FcmSendRequest;
 import triB.triB.global.fcm.FcmSender;
@@ -42,6 +43,7 @@ public class ChatPushNotifier {
                     .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
             List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(e.roomId(), IsAlarm.ON);
             List<Long> targetUserIds = users.stream()
+                    .filter(user -> user.getUserStatus() == UserStatus.ACTIVE)
                     .map(User::getUserId)
                     .filter(id -> !Objects.equals(id, e.userId()))
                     .filter(id -> !isOnlineUsersInRoom(e. roomId(), id))
@@ -67,7 +69,6 @@ public class ChatPushNotifier {
                             .image(image)
                             .token(t.getToken())
                             .build();
-
                     fcmSender.sendPushNotification(fcmSendRequest);
                 }
             }

@@ -1,4 +1,4 @@
-package triB.triB.schedule.event;
+package triB.triB.chat.event;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,30 +19,28 @@ import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 
 import java.util.List;
-import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class SchedulePushNotifier {
+public class TripPushNotifier {
+
     private final FcmSender fcmSender;
-    private final UserRoomRepository userRoomRepository;
-    private final TokenRepository tokenRepository;
     private final RoomRepository roomRepository;
+    private final TokenRepository tokenRepository;
+    private final UserRoomRepository userRoomRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onScheduleBatchUpdated(ScheduleBatchUpdatedEvent e) {
+    public void onTripCreated(TripCreatedEvent e) {
         try {
-            log.info("Schedule batch update push notification send. tripId={}, roomId={}", e.tripId(), e.roomId());
-
+            log.info("trip created notification send");
             Room room = roomRepository.findById(e.roomId())
-                    .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다"));
+                    .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
 
             List<User> users = userRoomRepository.findUsersByRoomIdAndIsAlarm(e.roomId(), IsAlarm.ON);
             List<Long> targetUserIds = users.stream()
                     .filter(user -> user.getUserStatus() == UserStatus.ACTIVE)
                     .map(User::getUserId)
-                    .filter(id -> !Objects.equals(id, e.userId()))
                     .toList();
 
             if (targetUserIds.isEmpty()) return;
@@ -50,26 +48,23 @@ public class SchedulePushNotifier {
             List<Token> tokens = tokenRepository.findAllByUser_UserIdInAndUser_IsAlarm(targetUserIds, IsAlarm.ON);
 
             if (tokens.isEmpty()) return;
-
             String roomName = room.getRoomName();
-            String content = e.nickname() + "님이 " + e.dayNumber() + "일차 일정을 수정했습니다.";
-
             for (Token t : tokens) {
                 if (t != null) {
                     FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                            .requestType(RequestType.SCHEDULE_UPDATED)
-                            .id(e.tripId())
-                            .title(roomName)
-                            .content(content)
+                            .requestType(RequestType.TRIP_CREATED)
+                            .id(e.roomId())
+                            .title("TriB")
+                            .content(roomName + "에 대한 일정이 성공적으로 생성되었어요!")
                             .image(null)
                             .token(t.getToken())
                             .build();
-
                     fcmSender.sendPushNotification(fcmSendRequest);
                 }
             }
-        } catch (Exception ex) {
-            log.error("FCM push after-commit failed. tripId={}, roomId={}", e.tripId(), e.roomId(), ex);
+
+        } catch (Exception ex){
+            log.error("FCM push after-commit failed. roomId={}", e.roomId(), ex);
         }
     }
 }
