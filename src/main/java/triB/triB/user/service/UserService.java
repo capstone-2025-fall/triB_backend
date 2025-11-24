@@ -27,6 +27,7 @@ import triB.triB.auth.repository.UserRepository;
 import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.user.dto.MyProfile;
+import triB.triB.user.dto.UpdateProfileRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,18 +60,30 @@ public class UserService {
     }
 
     @Transactional
-    public void updateMyProfile(Long userId, MultipartFile photo, String nickname) {
+    public void updateMyProfile(Long userId, MultipartFile photo, UpdateProfileRequest updateProfileRequest) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
 
+        if (updateProfileRequest != null){
+            if (Boolean.TRUE.equals(updateProfileRequest.getIsDeleted())) {
+                if (user.getPhotoUrl() != null) {
+                    s3Client.delete(user.getPhotoUrl());
+                }
+                user.setPhotoUrl(null);
+            }
+            String nickname = updateProfileRequest.getNickname();
+            if (nickname != null && !nickname.isEmpty()) {
+                log.info("userId = {} 의 닉네임을 변경합니다.", userId);
+                user.setNickname(nickname);
+            }
+        }
         if (photo != null && !photo.isEmpty()){
             log.info("userId = {} 의 프로필 이미지를 변경합니다.", userId);
+            if (user.getPhotoUrl() != null) {
+                s3Client.delete(user.getPhotoUrl());
+            }
             String newPhoto = s3Client.uploadFile(photo);
             user.setPhotoUrl(newPhoto);
-        }
-        if (nickname != null) {
-            log.info("userId = {} 의 닉네임을 변경합니다.", userId);
-            user.setNickname(nickname);
         }
         userRepository.save(user);
     }
