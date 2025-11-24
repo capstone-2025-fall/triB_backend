@@ -101,7 +101,7 @@ public class AuthService {
         log.info("회원가입을 시작합니다.");
         String photoUrl = null;
         try {
-            photoUrl = !photo.isEmpty() ? s3Client.uploadFile(photo) : null;
+            photoUrl = (photo != null && !photo.isEmpty()) ? s3Client.uploadFile(photo) : null;
             User user = User.builder()
                     .photoUrl(photoUrl)
                     .email(authRequest.getEmail())
