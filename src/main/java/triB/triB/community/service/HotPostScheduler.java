@@ -25,11 +25,11 @@ public class HotPostScheduler {
         log.info("핫 게시글 갱신 시작");
         try {
             HotPostResponse hotPost = postService.calculateHotPost();
-            cachedHotPost.set(hotPost);
             if (hotPost != null) {
+                cachedHotPost.set(hotPost);
                 log.info("핫 게시글 갱신 완료: postId={}, title={}", hotPost.getPostId(), hotPost.getTitle());
             } else {
-                log.info("핫 게시글이 없습니다.");
+                log.info("새로운 핫 게시글이 없어 기존 핫 게시글을 유지합니다.");
             }
         } catch (Exception e) {
             log.error("핫 게시글 갱신 중 오류 발생", e);
