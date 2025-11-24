@@ -17,10 +17,10 @@ public class HotPostScheduler {
     private final AtomicReference<HotPostResponse> cachedHotPost = new AtomicReference<>();
 
     /**
-     * 1시간마다 핫 게시글을 계산하여 캐시에 저장
-     * fixedRate = 3600000ms (1시간)
+     * 핫 게시글을 계산하여 캐시에 저장
+     * 기본값: 3600000ms (1시간), application.properties에서 hot-post.scheduler.interval로 설정 가능
      */
-    @Scheduled(fixedRate = 3600000)
+    @Scheduled(fixedRateString = "${hot-post.scheduler.interval:3600000}")
     public void updateHotPost() {
         log.info("핫 게시글 갱신 시작");
         try {
