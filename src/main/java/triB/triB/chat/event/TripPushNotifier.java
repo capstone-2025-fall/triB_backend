@@ -51,15 +51,19 @@ public class TripPushNotifier {
             String roomName = room.getRoomName();
             for (Token t : tokens) {
                 if (t != null) {
-                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                            .requestType(RequestType.TRIP_CREATED)
-                            .id(e.roomId())
-                            .title("TriB")
-                            .content(roomName + "에 대한 일정이 성공적으로 생성되었어요!")
-                            .image(null)
-                            .token(t.getToken())
-                            .build();
-                    fcmSender.sendPushNotification(fcmSendRequest);
+                    try {
+                        FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+                                .requestType(RequestType.TRIP_CREATED)
+                                .id(e.roomId())
+                                .title("TriB")
+                                .content(roomName + "에 대한 일정이 성공적으로 생성되었어요!")
+                                .image(null)
+                                .token(t.getToken())
+                                .build();
+                        fcmSender.sendPushNotification(fcmSendRequest);
+                    } catch (Exception ex) {
+                        log.error("FCM push failed for userId={}, token={}", t.getUser().getUserId(), t.getToken(), ex);
+                    }
                 }
             }
 

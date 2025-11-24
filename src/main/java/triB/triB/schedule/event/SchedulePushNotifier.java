@@ -56,16 +56,20 @@ public class SchedulePushNotifier {
 
             for (Token t : tokens) {
                 if (t != null) {
-                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                            .requestType(RequestType.SCHEDULE_UPDATED)
-                            .id(e.tripId())
-                            .title(roomName)
-                            .content(content)
-                            .image(null)
-                            .token(t.getToken())
-                            .build();
+                    try {
+                        FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+                                .requestType(RequestType.SCHEDULE_UPDATED)
+                                .id(e.tripId())
+                                .title(roomName)
+                                .content(content)
+                                .image(null)
+                                .token(t.getToken())
+                                .build();
 
-                    fcmSender.sendPushNotification(fcmSendRequest);
+                        fcmSender.sendPushNotification(fcmSendRequest);
+                    } catch (Exception ex) {
+                        log.error("FCM push failed for userId={}, token={}", t.getUser().getUserId(), t.getToken(), ex);
+                    }
                 }
             }
         } catch (Exception ex) {

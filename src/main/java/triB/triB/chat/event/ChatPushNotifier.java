@@ -61,15 +61,19 @@ public class ChatPushNotifier {
 
             for (Token t : tokens) {
                 if (t != null) {
-                    FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
-                            .requestType(RequestType.MESSAGE)
-                            .id(e.roomId()) //roomId 넣고 클릭하면 글로이동
-                            .title(roomName)
-                            .content(content)
-                            .image(image)
-                            .token(t.getToken())
-                            .build();
-                    fcmSender.sendPushNotification(fcmSendRequest);
+                    try {
+                        FcmSendRequest fcmSendRequest = FcmSendRequest.builder()
+                                .requestType(RequestType.MESSAGE)
+                                .id(e.roomId()) //roomId 넣고 클릭하면 글로이동
+                                .title(roomName)
+                                .content(content)
+                                .image(image)
+                                .token(t.getToken())
+                                .build();
+                        fcmSender.sendPushNotification(fcmSendRequest);
+                    } catch (Exception ex) {
+                        log.error("FCM push failed for userId={}, token={}", t.getUser().getUserId(), t.getToken(), ex);
+                    }
                 }
             }
         } catch  (Exception ex) {
