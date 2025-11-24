@@ -156,6 +156,7 @@ public class UserService {
                     .ifPresentOrElse(
                             t -> {
                                 t.setToken(token);
+                                tokenRepository.save(t);
                             },
                             () -> {
                                 Token t = Token.builder()
@@ -187,6 +188,5 @@ public class UserService {
                 .retrieve()
                 .bodyToMono(UnlinkResponse.class)
                 .block();
-
     }
 }
