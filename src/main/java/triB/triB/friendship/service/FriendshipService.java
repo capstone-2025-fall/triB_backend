@@ -140,7 +140,7 @@ public class FriendshipService {
 
         //FCM 메세지 알림 보내기
         log.info("push 알림을 전송합니다.");
-        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
+        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getAddressee().getUserId(), IsAlarm.ON);
         if (token != null) {
             FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", token.getToken());
             fcmSender.sendPushNotification(fcmSendRequest);
@@ -189,7 +189,7 @@ public class FriendshipService {
         log.info("push 알림을 전송합니다.");
         Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
         if (token != null) {
-            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getNickname()+" 님과 친구가 되었어요!", token.getToken());
+            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getAddressee().getNickname()+" 님과 친구가 되었어요!", token.getToken());
             fcmSender.sendPushNotification(fcmSendRequest);
         }
     }

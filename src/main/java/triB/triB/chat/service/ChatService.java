@@ -7,6 +7,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -19,6 +20,7 @@ import triB.triB.auth.entity.User;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.chat.dto.*;
 import triB.triB.chat.entity.*;
+import triB.triB.chat.event.TripCreatedEvent;
 import triB.triB.chat.repository.MessageBookmarkRepository;
 import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
@@ -66,6 +68,7 @@ public class ChatService {
     private final TripRepository tripRepository;
     private final RedisClient redisClient;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher publisher;
     private final PostRepository postRepository;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
@@ -124,7 +127,6 @@ public class ChatService {
                 .build();
     }
 
-    // todo 일단 RestAPI로 생성하고 일정 생성 했음을 알리는 걸 WebSocket으로 뿌리자
     @Transactional
     public Mono<Long> makeTrip(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -284,7 +286,9 @@ public class ChatService {
                                 scheduleRepository.save(schedule);
                             });
                 });
-
+        publisher.publishEvent(new TripCreatedEvent(
+                t.getTripId(), room.getRoomId()
+        ));
         return t.getTripId();
     }
 

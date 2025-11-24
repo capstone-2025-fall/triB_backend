@@ -138,6 +138,8 @@ public class UserService {
             oauthAccountRepository.delete(account);
         }
 
+        tokenRepository.findByUser_UserId(userId).ifPresent(tokenRepository::delete);
+
         redisClient.deleteData("rf", String.valueOf(userId));
         s3Client.delete(user.getPhotoUrl());
         user.setUserStatus(UserStatus.DELETED);
