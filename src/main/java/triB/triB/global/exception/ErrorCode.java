@@ -16,6 +16,7 @@ public enum ErrorCode {
 
     MODEL_REQUEST_ERROR(HttpStatus.BAD_REQUEST, "MODEL_REQUEST_ERROR", "일정 생성 요청이 잘못되었습니다."),
     MODEL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "MODEL_ERROR", "일정 생성 모델에 일시적인 문제가 발생했습니다."),
+    MODEL_CONNECTION_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "MODEL_CONNECTION_FAIL", "일정 생성 모델과의 연결을 실패했습니다."),
     TRIP_SAVE_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "TRIP_SAVE_FAIL", "일정 저장 중 오류가 발생했습니다."),
     TRIP_CREATING_IN_PROGRESS(HttpStatus.CONFLICT, "TRIP_CREATING_IN_PROGRESS", "이미 생성중인 일정이 있습니다."),
     TRIP_PREPARATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR , "TRIP_PREPARATION_FAILED", "일정 생성 준비 중 오류가 발생했습니다."),

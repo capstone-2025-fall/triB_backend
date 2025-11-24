@@ -1,8 +1,5 @@
 package triB.triB.chat.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.Date;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,13 +11,16 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.chat.dto.*;
 import triB.triB.chat.entity.*;
 import triB.triB.chat.event.TripCreatedEvent;
+import triB.triB.chat.event.TripErrorEvent;
 import triB.triB.chat.repository.MessageBookmarkRepository;
 import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Service
@@ -193,7 +194,7 @@ public class ChatService {
                     .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
                     .startDate(room.getStartDate().toString())
                     .country(room.getDestination())
-                    .members(userRoomRepository.countByRoom_RoomId(roomId))
+                    .members(userRoomRepository.countByRoom_RoomIdAndUserStatus(roomId, UserStatus.ACTIVE))
                     .places(places)
                     .mustVisit(mustVisit)
                     .rule(rule)
@@ -212,6 +213,7 @@ public class ChatService {
                             HttpStatusCode::is4xxClientError,
                             res -> res.createException().flatMap(e -> {
                                 log.error("AI 모델 요청 오류: {}", e.getMessage());
+                                publisher.publishEvent(new TripErrorEvent(roomId));
                                 return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
                             })
                     )
@@ -219,6 +221,7 @@ public class ChatService {
                             HttpStatusCode::is5xxServerError,
                             res -> res.createException().flatMap(e -> {
                                 log.error("AI 모델 서버 오류: {}", e.getMessage());
+                                publisher.publishEvent(new TripErrorEvent(roomId));
                                 return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
                             })
                     )
@@ -230,10 +233,13 @@ public class ChatService {
                     })
                     .onErrorResume(e -> {
                         if (e instanceof CustomException) {
-                            log.error("에러 발생: {}", e.getMessage());
                             return Mono.error(e);
                         }
-                        log.error("Trip 저장 실패", e.getMessage());
+                        if (e instanceof WebClientRequestException || e instanceof TimeoutException) {
+                            publisher.publishEvent(new TripErrorEvent(roomId));
+                            return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
+                        }
+                        publisher.publishEvent(new TripErrorEvent(roomId));
                         return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
                     });
         } catch (Exception e){
