@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 public class FcmSender {
 
     public void sendPushNotification(FcmSendRequest fcmSendRequest) throws FirebaseMessagingException {
-
         Message message = Message.builder()
                 .putData("type", fcmSendRequest.getRequestType().toString())
                 .putData("id", fcmSendRequest.getId() != null ? fcmSendRequest.getId().toString() : "0")
@@ -22,8 +21,6 @@ public class FcmSender {
                         .setCollapseKey(fcmSendRequest.getRequestType().toString())
                         .build())
                 .build();
-
         FirebaseMessaging.getInstance().send(message);
     }
-
 }
