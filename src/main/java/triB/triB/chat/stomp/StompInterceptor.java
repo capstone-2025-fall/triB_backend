@@ -15,7 +15,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.security.JwtProvider;
 import triB.triB.global.security.UserPrincipal;
 import triB.triB.room.repository.UserRoomRepository;
@@ -49,6 +52,9 @@ public class StompInterceptor implements ChannelInterceptor {
 
                 User user = userRepository.findById(userId)
                         .orElseThrow(()->new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+                if (user.getUserStatus() == UserStatus.DELETED)
+                    throw new CustomException(ErrorCode.INVALID_ACCESS);
 
                 UserPrincipal userPrincipal = new UserPrincipal(user, user.getUserId(), user.getEmail(), user.getUsername(), user.getNickname());
                 UsernamePasswordAuthenticationToken authentication

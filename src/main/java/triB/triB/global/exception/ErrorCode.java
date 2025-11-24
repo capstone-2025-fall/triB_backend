@@ -33,7 +33,10 @@ public enum ErrorCode {
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND", "일정을 찾을 수 없습니다."),
     ACCOMMODATION_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOMMODATION_NOT_FOUND", "숙소를 찾을 수 없습니다."),
     INVALID_VISIT_ORDER(HttpStatus.BAD_REQUEST, "INVALID_VISIT_ORDER", "유효하지 않은 방문 순서입니다."),
-    ROUTES_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ROUTES_API_ERROR", "경로 계산 중 오류가 발생했습니다.");
+    ROUTES_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ROUTES_API_ERROR", "경로 계산 중 오류가 발생했습니다."),
+
+    INVALID_ACCESS(HttpStatus.INTERNAL_SERVER_ERROR, "INVALID_ACCESS", "탈퇴한 유저는 접근할 수 없습니다.")
+    ;
 
     private final HttpStatus httpStatus;
     private final String code;
