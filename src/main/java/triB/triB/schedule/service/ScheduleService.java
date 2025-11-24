@@ -1,9 +1,13 @@
 package triB.triB.schedule.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import triB.triB.auth.entity.User;
+import triB.triB.auth.repository.UserRepository;
 import triB.triB.room.entity.Room;
+import triB.triB.schedule.event.ScheduleBatchUpdatedEvent;
 import triB.triB.room.entity.UserRoomId;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
@@ -47,6 +51,8 @@ public class ScheduleService {
     private final UserRoomRepository userRoomRepository;
     private final RoomRepository roomRepository;
     private final RoutesApiService routesApiService;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 사용자가 해당 여행에 접근 권한이 있는지 검증
@@ -1005,7 +1011,23 @@ public class ScheduleService {
         validateUserInTrip(tripId, userId);
 
         // 변경사항 적용 및 저장
-        return applyModifications(tripId, request.getDayNumber(), request.getModifications(), userId);
+        TripScheduleResponse response = applyModifications(tripId, request.getDayNumber(), request.getModifications(), userId);
+
+        // 푸시 알림 이벤트 발행
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        eventPublisher.publishEvent(new ScheduleBatchUpdatedEvent(
+                tripId,
+                trip.getRoomId(),
+                userId,
+                user.getNickname(),
+                request.getDayNumber()
+        ));
+
+        return response;
     }
 
     /**
