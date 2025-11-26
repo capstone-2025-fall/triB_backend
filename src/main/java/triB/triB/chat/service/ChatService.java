@@ -235,7 +235,7 @@ public class ChatService {
                         if (e instanceof CustomException) {
                             return Mono.error(e);
                         }
-                        if (e instanceof WebClientRequestException || e instanceof TimeoutException) {
+                        if (e instanceof WebClientRequestException) {
                             publisher.publishEvent(new TripErrorEvent(roomId));
                             return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
                         }
