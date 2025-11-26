@@ -20,6 +20,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.security.PrivateKey;
@@ -123,9 +124,9 @@ public class CustomRequestEntityConverter implements OAuth2AccessTokenResponseCl
     }
 
     private PrivateKey getPrivateKey() throws Exception {
-        ClassPathResource resource = new ClassPathResource(keyPath);
 
-        try (Reader reader = new InputStreamReader(resource.getInputStream());
+        try (FileInputStream resource = new FileInputStream(keyPath);
+             Reader reader = new InputStreamReader(resource);
              PEMParser pemParser = new PEMParser(reader)) {
 
             Object pemObject = pemParser.readObject();
