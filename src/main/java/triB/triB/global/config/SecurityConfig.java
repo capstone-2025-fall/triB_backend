@@ -15,11 +15,11 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import triB.triB.auth.security.CustomRequestEntityConverter;
 import triB.triB.auth.security.OAuth2LoginSuccessHandler;
 import triB.triB.global.exception.ExceptionHandlerFilter;
 import triB.triB.global.security.JwtAuthenticationFilter;
 
-import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -30,6 +30,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final ExceptionHandlerFilter exceptionHandlerFilter;
+    private final CustomRequestEntityConverter customRequestEntityConverter;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -67,6 +68,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
+                        .tokenEndpoint(token -> token
+                                .accessTokenResponseClient(customRequestEntityConverter))
                         .successHandler(oAuth2LoginSuccessHandler))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
