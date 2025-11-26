@@ -143,6 +143,9 @@ public class AuthService {
         String provider = jwtProvider.getProviderFromRegisterToken(registerToken);
         String providerId = jwtProvider.getProviderUserIdFromRegisterToken(registerToken);
         String image = registerRequest.getPhotoUrl();
+        String refreshToken = null;
+        if (registerRequest.getRefreshToken() != null && !registerRequest.getRefreshToken().isEmpty())
+            refreshToken = registerRequest.getRefreshToken();
 
         log.info("registerToken = " + registerToken + " providerId = " + providerId + " image = " + image);
 
@@ -170,6 +173,7 @@ public class AuthService {
                     .user(user)
                     .provider(provider)
                     .providerUserId(providerId)
+                    .refreshToken(refreshToken)
                     .build();
             oauthAccountRepository.save(account);
             return user.getUserId();

@@ -49,4 +49,10 @@ public class WebClientConfig {
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
+
+    @Bean
+    public WebClient appleWebClient() {
+        return WebClient.builder()
+                .build();
+    }
 }
