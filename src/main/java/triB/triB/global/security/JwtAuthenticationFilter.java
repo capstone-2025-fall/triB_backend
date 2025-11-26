@@ -65,8 +65,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
            log.debug("SecurityContext가 생성되었습니다. userId: {} ", userPrincipal.getUserId());
        } else {
-           log.debug("유효한 jwt 토큰이 request에 대해 존재하지 않습니다. request: {}", request.getRequestURI());
-           throw new JwtException("유효한 jwt 토큰이 request에 대해 존재하지않습니다.");
+           log.debug("유효하지 않은 jwt 토큰입니다. request: {}, token: {}", request.getRequestURI(), token.substring(0, Math.min(20, token.length())) + "...");
+           // OAuth2 엔드포인트는 토큰이 유효하지 않아도 통과시킴
+           filterChain.doFilter(request, response);
+           return;
        }
        filterChain.doFilter(request, response);
     }
