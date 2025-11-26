@@ -70,7 +70,14 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .tokenEndpoint(token -> token
                                 .accessTokenResponseClient(customRequestEntityConverter))
-                        .successHandler(oAuth2LoginSuccessHandler))
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            System.out.println("============== 🚨 진짜 에러 발생 원인 🚨 ==============");
+                            exception.printStackTrace(); // 콘솔에 에러 내용을 상세히 찍음
+
+                            response.setStatus(400);
+                            response.getWriter().write("Login Failed: " + exception.getMessage());
+                        }))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(exceptionHandlerFilter, SecurityContextHolderFilter.class)
