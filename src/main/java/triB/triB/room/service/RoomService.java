@@ -216,7 +216,9 @@ public class RoomService {
                                     .photoUrl(u.getPhotoUrl())
                                     .build();
                         })
-        .toList());
+                .sorted(Comparator.comparing(response ->
+                        "(탈퇴한 사용자)".equals(response.getNickname())))
+                .toList());
         return responses;
     }
 
@@ -242,9 +244,21 @@ public class RoomService {
                 .collect(Collectors.groupingBy(
                         ur -> ur.getRoom().getRoomId(),
                         LinkedHashMap::new,
-                        Collectors.mapping(ur -> ur.getUser().getPhotoUrl(),
+                        Collectors.mapping(ur -> ur.getUser(),
                                 Collectors.toCollection(ArrayList::new))
+                ))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .sorted(Comparator.comparing(user ->
+                                        "(탈퇴한 사용자)".equals(user.getNickname())))
+                                .map(User::getPhotoUrl)
+                                .collect(Collectors.toList()),
+                        (a, b) -> a,
+                    LinkedHashMap::new
                 ));
+
 
         // 3. 모든 방의 마지막 메세지를 한꺼번에 가져오기
         List<Message> lastMessages = messageRepository.findLastMessagesByRooms(roomIds);
