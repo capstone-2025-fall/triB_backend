@@ -848,4 +848,122 @@ class ScheduleServiceTest {
 
         verify(routesApiService, atLeastOnce()).calculateTravelTime(anyDouble(), anyDouble(), anyDouble(), anyDouble(), eq(TravelMode.DRIVE));
     }
+
+    @Test
+    @DisplayName("일정 비용 정보 조회 성공 - 비용 정보가 있는 경우")
+    void getScheduleCost_Success_WithCostInfo() {
+        // given
+        Long scheduleId = 1L;
+        Schedule scheduleWithCost = Schedule.builder()
+                .scheduleId(scheduleId)
+                .tripId(tripId)
+                .dayNumber(1)
+                .date(LocalDate.of(2025, 1, 1))
+                .visitOrder(1)
+                .placeName("에버랜드")
+                .placeTag(PlaceTag.TOURIST_SPOT)
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 9, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .travelTime("30분")
+                .estimatedCost(50000)
+                .costExplanation("입장료 및 식사 비용 포함")
+                .build();
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
+                .thenReturn(Optional.of(scheduleWithCost));
+
+        // when
+        ScheduleCostResponse response = scheduleService.getScheduleCost(tripId, scheduleId, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getScheduleId()).isEqualTo(scheduleId);
+        assertThat(response.getEstimatedCost()).isEqualTo(50000);
+        assertThat(response.getCostExplanation()).isEqualTo("입장료 및 식사 비용 포함");
+
+        verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+    }
+
+    @Test
+    @DisplayName("일정 비용 정보 조회 성공 - 비용 정보가 없는 경우 (null)")
+    void getScheduleCost_Success_WithoutCostInfo() {
+        // given
+        Long scheduleId = 1L;
+        Schedule scheduleWithoutCost = Schedule.builder()
+                .scheduleId(scheduleId)
+                .tripId(tripId)
+                .dayNumber(1)
+                .date(LocalDate.of(2025, 1, 1))
+                .visitOrder(1)
+                .placeName("카페")
+                .placeTag(PlaceTag.RESTAURANT)
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .isVisit(false)
+                .arrival(LocalDateTime.of(2025, 1, 1, 9, 0))
+                .departure(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .travelTime("30분")
+                .estimatedCost(null)
+                .costExplanation(null)
+                .build();
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
+                .thenReturn(Optional.of(scheduleWithoutCost));
+
+        // when
+        ScheduleCostResponse response = scheduleService.getScheduleCost(tripId, scheduleId, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getScheduleId()).isEqualTo(scheduleId);
+        assertThat(response.getEstimatedCost()).isNull();
+        assertThat(response.getCostExplanation()).isNull();
+
+        verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+    }
+
+    @Test
+    @DisplayName("일정 비용 정보 조회 실패 - 존재하지 않는 일정")
+    void getScheduleCost_Fail_ScheduleNotFound() {
+        // given
+        Long scheduleId = 999L;
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+        when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> scheduleService.getScheduleCost(tripId, scheduleId, userId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("일정을 찾을 수 없습니다.");
+
+        verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+    }
+
+    @Test
+    @DisplayName("일정 비용 정보 조회 실패 - 권한 없는 사용자")
+    void getScheduleCost_Fail_Unauthorized() {
+        // given
+        Long scheduleId = 1L;
+        Long unauthorizedUserId = 999L;
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> scheduleService.getScheduleCost(tripId, scheduleId, unauthorizedUserId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("해당 여행에 접근 권한이 없습니다.");
+
+        verify(userRoomRepository).existsById(any(UserRoomId.class));
+        verify(scheduleRepository, never()).findByScheduleIdAndTripId(anyLong(), anyLong());
+    }
 }
