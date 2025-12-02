@@ -18,6 +18,7 @@ import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.ModificationType;
 import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
+import triB.triB.schedule.dto.ScheduleCostResponse;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.ScheduleItemWithLocationResponse;
 import triB.triB.schedule.dto.ScheduleModificationItem;
@@ -207,6 +208,25 @@ public class ScheduleService {
         return VisitStatusUpdateResponse.builder()
                 .scheduleId(schedule.getScheduleId())
                 .isVisit(schedule.getIsVisit())
+                .build();
+    }
+
+    /**
+     * 일정의 비용 정보 조회
+     */
+    public ScheduleCostResponse getScheduleCost(Long tripId, Long scheduleId, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Schedule 조회
+        Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+
+        // 응답 DTO 생성 및 반환
+        return ScheduleCostResponse.builder()
+                .scheduleId(schedule.getScheduleId())
+                .estimatedCost(schedule.getEstimatedCost())
+                .costExplanation(schedule.getCostExplanation())
                 .build();
     }
 

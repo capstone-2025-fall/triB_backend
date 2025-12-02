@@ -16,6 +16,7 @@ import triB.triB.schedule.dto.DeleteScheduleResponse;
 import triB.triB.schedule.dto.PreviewScheduleRequest;
 import triB.triB.schedule.dto.ReorderScheduleRequest;
 import triB.triB.schedule.dto.RepresentativeTripResponse;
+import triB.triB.schedule.dto.ScheduleCostResponse;
 import triB.triB.schedule.dto.ScheduleItemResponse;
 import triB.triB.schedule.dto.TripListResponse;
 import triB.triB.schedule.dto.TripScheduleResponse;
@@ -143,6 +144,29 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("방문 상태를 변경했습니다.", response);
+    }
+
+    @GetMapping("/trips/{tripId}/schedules/{scheduleId}/cost")
+    @Operation(
+            summary = "일정 비용 정보 조회",
+            description = "특정 일정의 예상 비용과 비용 설명을 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<ScheduleCostResponse>> getScheduleCost(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @Parameter(description = "일정 ID", required = true)
+            @PathVariable Long scheduleId,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        ScheduleCostResponse response = scheduleService.getScheduleCost(
+                tripId,
+                scheduleId,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("일정 비용 정보를 조회했습니다.", response);
     }
 
     @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/reorder")
