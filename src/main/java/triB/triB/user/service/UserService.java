@@ -136,7 +136,6 @@ public class UserService {
         }
 
         redisClient.deleteData("rf", String.valueOf(userId));
-
         try {
             if (user.getPhotoUrl() != null)
                 s3Client.delete(user.getPhotoUrl());
@@ -146,9 +145,9 @@ public class UserService {
         user.setUserStatus(UserStatus.DELETED);
         user.setEmail(null);
         user.setUsername(null);
+        user.setPhotoUrl(null);
         userRepository.save(user);
         log.info("user 상태변경 완료");
-
 
         log.info("userId = {} 인 유저가 탈퇴했습니다.", userId);
     }

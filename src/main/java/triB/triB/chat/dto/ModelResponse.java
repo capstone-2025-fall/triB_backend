@@ -42,5 +42,7 @@ public class ModelResponse {
         private String arrival;
         private String departure;
         private Integer travelTime;
+        private Integer estimatedCost;
+        private String costExplanation;
     }
 }
