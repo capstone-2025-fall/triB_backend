@@ -233,13 +233,16 @@ public class ChatService {
                     })
                     .onErrorResume(e -> {
                         if (e instanceof CustomException) {
+                            log.error(e.getMessage());
                             return Mono.error(e);
                         }
                         if (e instanceof WebClientRequestException) {
                             publisher.publishEvent(new TripErrorEvent(roomId));
+                            log.error(e.getMessage());
                             return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
                         }
                         publisher.publishEvent(new TripErrorEvent(roomId));
+                        log.error(e.getMessage());
                         return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
                     });
         } catch (Exception e){
