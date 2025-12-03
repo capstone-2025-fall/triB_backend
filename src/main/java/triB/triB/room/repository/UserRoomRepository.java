@@ -18,11 +18,11 @@ import java.util.List;
 public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> {
 
     @Query("select distinct ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId " +
-            "order by (select max(m.createdAt) from Message m where m.room = ur.room) desc")
+            "order by coalesce((select max(m.createdAt) from Message m where m.room = ur.room), r.createdAt) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserId(@Param("userId") Long userId);
 
     @Query("select distinct ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId and lower(r.roomName) like lower(concat('%', :roomName, '%')) " +
-            "order by (select max(m.createdAt) from Message m where m.room = ur.room) desc")
+            "order by coalesce((select max(m.createdAt) from Message m where m.room = ur.room), r.createdAt) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserIdAndRoom_RoomName(@Param("userId") Long userId, @Param("roomName") String roomName);
 
     @Query("select distinct ur from UserRoom ur join fetch ur.user where ur.room.roomId in :roomIds order by ur.user.nickname asc")
