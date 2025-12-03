@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 import triB.triB.chat.dto.RoomChatResponse;
+import triB.triB.chat.dto.TripCreateStatus;
 import triB.triB.chat.dto.TripCreateStatusResponse;
 import triB.triB.chat.dto.TripResponse;
 import triB.triB.chat.service.ChatService;
@@ -33,13 +35,16 @@ public class ChatController {
 
     // 일정 생성하기
     @PostMapping("/trip")
-    public ResponseEntity<ApiResponse<TripResponse>> createTrip(
+    public Mono<ResponseEntity<ApiResponse<TripCreateStatusResponse>>> createTrip(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestParam(name = "roomId") Long roomId
     ) {
         Long userId = userPrincipal.getUserId();
-        TripResponse response = new TripResponse(chatService.makeTrip(userId, roomId).block());
-        return ApiResponse.created("일정을 생성했습니다.", response);
+        return Mono.fromCallable(() -> {
+                chatService.startTripAsync(userId, roomId);
+                return ApiResponse.ok(
+                        "요청을 접수했습니다.", new TripCreateStatusResponse(TripCreateStatus.WAITING, null));
+        });
     }
 
     // 일정 생성 상태 조회
