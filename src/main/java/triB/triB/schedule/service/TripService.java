@@ -19,6 +19,7 @@ import triB.triB.schedule.repository.TripRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -87,12 +88,14 @@ public class TripService {
         // 참여자 목록 조회
         List<User> participants = userRoomRepository.findUsersByRoomId(room.getRoomId());
         List<TripParticipantResponse> participantResponses = participants.stream()
+                .sorted(Comparator.comparing(user ->
+                        "(탈퇴한 사용자)".equals(user.getNickname())))
                 .map(user -> TripParticipantResponse.builder()
                         .userId(user.getUserId())
                         .nickname(user.getNickname())
                         .photoUrl(user.getPhotoUrl())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         // 사용자 설정 예산 조회
         BigDecimal userBudget = tripUserBudgetRepository

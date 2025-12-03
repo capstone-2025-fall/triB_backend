@@ -91,7 +91,8 @@ public class RoomService {
         for (Long id : userIds) {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("유저가 존재하지 않습니다."));
-
+            if (user.getUserStatus() == UserStatus.DELETED)
+                continue;
             UserRoom userRoom = UserRoom.builder()
                     .id(new UserRoomId(user.getUserId(), room.getRoomId()))
                     .user(user)
@@ -166,7 +167,8 @@ public class RoomService {
             } else {
                 User user = userRepository.findById(id)
                         .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
-
+                if (user.getUserStatus() == UserStatus.DELETED)
+                    continue;
                 UserRoom ur2 = UserRoom.builder()
                         .user(user)
                         .room(room)
@@ -182,7 +184,7 @@ public class RoomService {
             throw new BadCredentialsException("해당 채팅방에 대한 권한이 없습니다");
         }
 
-        return friendRepository.findAllFriendByUser(userId)
+        return friendRepository.findAllFriendByUserAndUserStatus(userId, UserStatus.ACTIVE)
                 .stream()
                 .filter(user -> !userRoomRepository
                         .existsByUser_UserIdAndRoom_RoomId(user.getUserId(), roomId))
@@ -214,7 +216,9 @@ public class RoomService {
                                     .photoUrl(u.getPhotoUrl())
                                     .build();
                         })
-        .toList());
+                .sorted(Comparator.comparing(response ->
+                        "(탈퇴한 사용자)".equals(response.getNickname())))
+                .toList());
         return responses;
     }
 
@@ -240,8 +244,19 @@ public class RoomService {
                 .collect(Collectors.groupingBy(
                         ur -> ur.getRoom().getRoomId(),
                         LinkedHashMap::new,
-                        Collectors.mapping(ur -> ur.getUser().getPhotoUrl(),
+                        Collectors.mapping(ur -> ur.getUser(),
                                 Collectors.toCollection(ArrayList::new))
+                ))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .sorted(Comparator.comparing(user ->
+                                        "(탈퇴한 사용자)".equals(user.getNickname())))
+                                .map(User::getPhotoUrl)
+                                .collect(Collectors.toList()),
+                        (a, b) -> a,
+                    LinkedHashMap::new
                 ));
 
         List<Object[]> allPeopleNumInRoom = userRoomRepository.countByUserInRooms(roomIds, UserStatus.ACTIVE);
@@ -278,7 +293,10 @@ public class RoomService {
                     else
                         content = msg.getContent();
                 } else {
-                    content = "삭제된 메세지입니다.";
+                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE)
+                        content = "삭제된 게시글입니다.";
+                    else
+                        content = "삭제된 메세지입니다.";
                 }
             }
             RoomsResponse response = RoomsResponse.builder()

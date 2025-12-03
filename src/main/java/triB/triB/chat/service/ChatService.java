@@ -1,24 +1,26 @@
 package triB.triB.chat.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.Date;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.chat.dto.*;
 import triB.triB.chat.entity.*;
+import triB.triB.chat.event.TripCreatedEvent;
+import triB.triB.chat.event.TripErrorEvent;
 import triB.triB.chat.repository.MessageBookmarkRepository;
 import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
@@ -48,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,6 +69,7 @@ public class ChatService {
     private final TripRepository tripRepository;
     private final RedisClient redisClient;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher publisher;
     private final PostRepository postRepository;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
@@ -124,7 +128,6 @@ public class ChatService {
                 .build();
     }
 
-    // todo 일단 RestAPI로 생성하고 일정 생성 했음을 알리는 걸 WebSocket으로 뿌리자
     @Transactional
     public Mono<Long> makeTrip(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -191,7 +194,7 @@ public class ChatService {
                     .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
                     .startDate(room.getStartDate().toString())
                     .country(room.getDestination())
-                    .members(userRoomRepository.countByRoom_RoomId(roomId))
+                    .members(userRoomRepository.countByRoom_RoomIdAndUserStatus(roomId, UserStatus.ACTIVE))
                     .places(places)
                     .mustVisit(mustVisit)
                     .rule(rule)
@@ -210,6 +213,7 @@ public class ChatService {
                             HttpStatusCode::is4xxClientError,
                             res -> res.createException().flatMap(e -> {
                                 log.error("AI 모델 요청 오류: {}", e.getMessage());
+                                publisher.publishEvent(new TripErrorEvent(roomId));
                                 return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
                             })
                     )
@@ -217,6 +221,7 @@ public class ChatService {
                             HttpStatusCode::is5xxServerError,
                             res -> res.createException().flatMap(e -> {
                                 log.error("AI 모델 서버 오류: {}", e.getMessage());
+                                publisher.publishEvent(new TripErrorEvent(roomId));
                                 return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
                             })
                     )
@@ -228,10 +233,16 @@ public class ChatService {
                     })
                     .onErrorResume(e -> {
                         if (e instanceof CustomException) {
-                            log.error("에러 발생: {}", e.getMessage());
+                            log.error(e.getMessage());
                             return Mono.error(e);
                         }
-                        log.error("Trip 저장 실패", e.getMessage());
+                        if (e instanceof WebClientRequestException) {
+                            publisher.publishEvent(new TripErrorEvent(roomId));
+                            log.error(e.getMessage());
+                            return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
+                        }
+                        publisher.publishEvent(new TripErrorEvent(roomId));
+                        log.error(e.getMessage());
                         return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
                     });
         } catch (Exception e){
@@ -286,7 +297,9 @@ public class ChatService {
                                 scheduleRepository.save(schedule);
                             });
                 });
-
+        publisher.publishEvent(new TripCreatedEvent(
+                t.getTripId(), room.getRoomId()
+        ));
         return t.getTripId();
     }
 

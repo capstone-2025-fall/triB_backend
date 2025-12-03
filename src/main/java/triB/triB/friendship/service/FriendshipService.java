@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.Token;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.auth.repository.TokenRepository;
 import triB.triB.auth.repository.UserRepository;
 import triB.triB.friendship.dto.FriendRequest;
@@ -49,7 +50,7 @@ public class FriendshipService {
 
     public List<UserResponse> getMyFriends(Long userId){
 
-        List<User> friends = friendRepository.findAllFriendByUser(userId);
+        List<User> friends = friendRepository.findAllFriendByUserAndUserStatus(userId, UserStatus.ACTIVE);
         List<UserResponse> result = new ArrayList<>();
 
         friends.forEach(friend -> {
@@ -70,7 +71,7 @@ public class FriendshipService {
     }
 
     public List<UserResponse> searchMyFriends(Long userId, String nickname){
-        List<User> friends = friendRepository.findAllFriendByUserAndFriend_Nickname(userId, nickname);
+        List<User> friends = friendRepository.findAllFriendByUserAndFriend_NicknameAndUserStatus(userId, nickname, UserStatus.ACTIVE);
         List<UserResponse> result = new ArrayList<>();
 
         friends.forEach(friend -> {
@@ -139,7 +140,7 @@ public class FriendshipService {
 
         //FCM 메세지 알림 보내기
         log.info("push 알림을 전송합니다.");
-        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
+        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getAddressee().getUserId(), IsAlarm.ON);
         if (token != null) {
             FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", token.getToken());
             fcmSender.sendPushNotification(fcmSendRequest);
@@ -148,7 +149,7 @@ public class FriendshipService {
 
     // 내게 온 요청 확인
     public List<FriendRequest> getMyRequests(Long userId){
-        List<Friendship> requests = friendshipRepository.findAllByAddressee_UserIdAndFriendshipStatusOrderByCreatedAtAsc(userId, FriendshipStatus.PENDING);
+        List<Friendship> requests = friendshipRepository.findAllByAddressee_UserIdAndFriendshipStatusAndUserStatusOrderByCreatedAtAsc(userId, FriendshipStatus.PENDING, UserStatus.ACTIVE);
         List<FriendRequest> result = new ArrayList<>();
 
         requests.forEach(friendship -> {
@@ -188,7 +189,7 @@ public class FriendshipService {
         log.info("push 알림을 전송합니다.");
         Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
         if (token != null) {
-            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getNickname()+" 님과 친구가 되었어요!", token.getToken());
+            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getAddressee().getNickname()+" 님과 친구가 되었어요!", token.getToken());
             fcmSender.sendPushNotification(fcmSendRequest);
         }
     }
