@@ -151,7 +151,6 @@ public class UserService {
         tokenRepository.findByUser_UserId(userId).ifPresent(tokenRepository::delete);
 
         redisClient.deleteData("rf", String.valueOf(userId));
-
         try {
             if (user.getPhotoUrl() != null)
                 s3Client.delete(user.getPhotoUrl());
@@ -162,6 +161,7 @@ public class UserService {
         user.setNickname("(탈퇴한 사용자)");
         user.setEmail(null);
         user.setUsername(null);
+        user.setPhotoUrl(null);
         userRepository.save(user);
         log.info("user 상태변경 완료");
 

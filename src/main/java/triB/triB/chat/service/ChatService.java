@@ -291,6 +291,8 @@ public class ChatService {
                                         .arrival(arrival)
                                         .departure(departure)
                                         .travelTime(String.valueOf(visit.getTravelTime()))
+                                        .estimatedCost(visit.getEstimatedCost())
+                                        .costExplanation(visit.getCostExplanation())
                                         .build();
                                 scheduleRepository.save(schedule);
                             });
