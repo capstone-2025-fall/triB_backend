@@ -244,6 +244,13 @@ public class RoomService {
                                 Collectors.toCollection(ArrayList::new))
                 ));
 
+        List<Object[]> allPeopleNumInRoom = userRoomRepository.countByUserInRooms(roomIds, UserStatus.ACTIVE);
+        Map<Long, Integer> peopleCountMap = allPeopleNumInRoom.stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],
+                        arr -> ((Number) arr[1]).intValue()
+                ));
+
         // 3. 모든 방의 마지막 메세지를 한꺼번에 가져오기
         List<Message> lastMessages = messageRepository.findLastMessagesByRooms(roomIds);
         Map<Long, Message> lastMessageMap = lastMessages.stream()
@@ -283,7 +290,8 @@ public class RoomService {
                     .endDate(r.getEndDate())
                     .content(content)
                     .createdAt(r.getCreatedAt())
-                    .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0)) //todo 안 읽은 메세지 개수 세는 로직 필요 Entity 추가
+                    .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0))
+                    .people(peopleCountMap.getOrDefault(r.getRoomId(), 0))
                     .build();
             responses.add(response);
         }

@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import triB.triB.auth.entity.IsAlarm;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.RoomStatus;
 import triB.triB.room.entity.UserRoom;
@@ -49,4 +50,7 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
 
     @Query(value = "select * from user_room ur where user_id = :userId and room_id = :roomId", nativeQuery = true)
     UserRoom findByUserIdAndRoomIdWithoutFilter(@Param("userId") Long userId, @Param("roomId") Long roomId);
+
+    @Query("select ur.room.roomId, count(ur) from UserRoom ur where ur.room.roomId in :roomIds and ur.user.userStatus = :userStatus group by ur.room.roomId")
+    List<Object[]> countByUserInRooms(@Param("roomIds") List<Long> roomIds, @Param("userStatus") UserStatus userStatus);
 }
