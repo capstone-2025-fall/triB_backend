@@ -24,7 +24,7 @@ public class AppleUserInfo implements OAuth2UserInfo {
         if (attributes.containsKey("name")) {
             return (String) attributes.get("name");
         }
-        return "Apple User";
+        return null;
     }
 
     @Override
