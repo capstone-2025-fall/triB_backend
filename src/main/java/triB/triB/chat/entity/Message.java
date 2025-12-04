@@ -57,4 +57,8 @@ public class Message {
     @Column(name = "updated_at", nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "reply_message", nullable = true)
+    private Message replyMessage;
 }
