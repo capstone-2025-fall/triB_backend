@@ -17,15 +17,15 @@ import java.util.List;
 @Repository
 public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> {
 
-    @Query("select distinct ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId " +
+    @Query("select ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId " +
             "order by coalesce((select max(m.createdAt) from Message m where m.room = ur.room), r.createdAt) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserId(@Param("userId") Long userId);
 
-    @Query("select distinct ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId and lower(r.roomName) like lower(concat('%', :roomName, '%')) " +
+    @Query("select ur from UserRoom ur join fetch ur.user u join fetch ur.room r where u.userId = :userId and lower(r.roomName) like lower(concat('%', :roomName, '%')) " +
             "order by coalesce((select max(m.createdAt) from Message m where m.room = ur.room), r.createdAt) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserIdAndRoom_RoomName(@Param("userId") Long userId, @Param("roomName") String roomName);
 
-    @Query("select distinct ur from UserRoom ur join fetch ur.user where ur.room.roomId in :roomIds and ur.user.userStatus = :userStatus order by ur.user.nickname asc")
+    @Query("select ur from UserRoom ur where ur.room.roomId in :roomIds and ur.user.userStatus = :userStatus order by ur.user.nickname asc")
     List<UserRoom> findAllWithUsersByRoomIdsAndUserStatus(@Param("roomIds") List<Long> roomIds, @Param("userStatus") UserStatus userStatus);
 
     @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId order by ur.user.nickname asc")
@@ -38,8 +38,6 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
 
     UserRoom findByUser_UserIdAndRoom_RoomId(Long userId, Long roomId);
 
-    UserRoom findByUser_UserIdAndRoom_RoomIdAndRoomStatus(Long userId, Long roomId, RoomStatus roomStatus);
-
     @Query("select count(ur.user) from UserRoom ur where ur.room.roomId = :roomId and ur.user.userStatus = :userStatus")
     Integer countByRoom_RoomIdAndUserStatus(@Param("roomId") Long roomId, @Param("userStatus") UserStatus userStatus);
 
@@ -49,6 +47,4 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
     @Query(value = "select * from user_room ur where user_id = :userId and room_id = :roomId", nativeQuery = true)
     UserRoom findByUserIdAndRoomIdWithoutFilter(@Param("userId") Long userId, @Param("roomId") Long roomId);
 
-    @Query("select ur.room.roomId, count(ur) from UserRoom ur where ur.room.roomId in :roomIds and ur.user.userStatus = :userStatus group by ur.room.roomId")
-    List<Object[]> countByUserInRooms(@Param("roomIds") List<Long> roomIds, @Param("userStatus") UserStatus userStatus);
 }
