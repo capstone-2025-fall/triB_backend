@@ -28,7 +28,8 @@ public class SocketController {
     private final JwtProvider jwtProvider;
     private final SimpMessagingTemplate messagingTemplate;
 
-    @MessageMapping("/chat/{roomId}/send") // client가 메세지 전송
+    // client가 메세지 전송
+    @MessageMapping("/chat/{roomId}/send")
     public void sendMessage(
             Principal principal,
             @DestinationVariable Long roomId,
@@ -40,6 +41,23 @@ public class SocketController {
         messagingTemplate.convertAndSend(
                 "/sub/chat/" + roomId,
                 ApiResponse.success("메세지를 전송했습니다.", result)
+        );
+    }
+
+    // 메세지 답장
+    @MessageMapping("/chat/{roomId}/reply")
+    public void replyMessage(
+            Principal principal,
+            @DestinationVariable Long roomId,
+            @Payload MessageReplyRequest messageReplyRequest
+    ){
+        UsernamePasswordAuthenticationToken auth = (UsernamePasswordAuthenticationToken) principal;
+        UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
+        Long userId = userPrincipal.getUserId();
+        MessageResponse result = socketService.replyMessageToRoom(userId, roomId, messageReplyRequest.getContent(), messageReplyRequest.getMessageId());
+        messagingTemplate.convertAndSend(
+                "/sub/chat/"+roomId,
+                ApiResponse.success("메세지를 답장했습니다.", result)
         );
     }
 

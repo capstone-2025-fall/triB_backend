@@ -36,7 +36,8 @@ public enum ErrorCode {
     INVALID_VISIT_ORDER(HttpStatus.BAD_REQUEST, "INVALID_VISIT_ORDER", "유효하지 않은 방문 순서입니다."),
     ROUTES_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ROUTES_API_ERROR", "경로 계산 중 오류가 발생했습니다."),
 
-    INVALID_ACCESS(HttpStatus.INTERNAL_SERVER_ERROR, "INVALID_ACCESS", "탈퇴한 유저는 접근할 수 없습니다.")
+    INVALID_ACCESS(HttpStatus.INTERNAL_SERVER_ERROR, "INVALID_ACCESS", "탈퇴한 유저는 접근할 수 없습니다."),
+    MESSAGE_DELETED(HttpStatus.BAD_REQUEST, "MESSAGE_DELETED", "삭제된 메세지엔 답장할 수 없습니다.")
     ;
 
     private final HttpStatus httpStatus;

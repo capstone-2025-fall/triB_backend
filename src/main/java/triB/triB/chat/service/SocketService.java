@@ -23,6 +23,8 @@ import triB.triB.community.entity.Post;
 import triB.triB.community.repository.PostImageRepository;
 import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
+import triB.triB.global.exception.CustomException;
+import triB.triB.global.exception.ErrorCode;
 import triB.triB.room.entity.Room;
 import triB.triB.room.entity.RoomReadState;
 import triB.triB.room.entity.RoomReadStateId;
@@ -86,6 +88,57 @@ public class SocketService {
                                 .isBookmarked(false)
                                 .placeDetail(null)
                                 .communityDetail(null)
+                                .replyMessage(null)
+                                .build()
+                )
+                .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    //메세지 답장
+    @Transactional
+    public MessageResponse replyMessageToRoom(Long userId, Long roomId, String content, Long messageId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저가 존재하지 않습니다."));
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        Message replyMessage = messageRepository.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 메세지가 존재하지 않습니다."));
+
+        // 삭제된 메세지에 답장 불가
+        if (replyMessage.getMessageStatus().equals(MessageStatus.DELETE))
+            throw new CustomException(ErrorCode.MESSAGE_DELETED);
+
+        Message message = Message.builder()
+                .room(room)
+                .user(user)
+                .messageType(MessageType.TEXT)
+                .messageStatus(MessageStatus.ACTIVE)
+                .content(content)
+                .replyMessage(replyMessage)
+                .build();
+        messageRepository.save(message);
+
+        publisher.publishEvent(new ChatMessageCreatedEvent(
+                roomId, userId, user.getNickname(), user.getPhotoUrl(), message.getContent(), message.getMessageType()
+        ));
+
+        return MessageResponse.builder()
+                .actionType(ActionType.MESSAGE_REPLY)
+                .user(new UserResponse(userId, user.getNickname(), user.getPhotoUrl()))
+                .message(
+                        MessageDto.builder()
+                                .messageId(message.getMessageId())
+                                .content(message.getContent())
+                                .messageType(message.getMessageType())
+                                .messageStatus(MessageStatus.ACTIVE)
+                                .tag(null)
+                                .isBookmarked(false)
+                                .placeDetail(null)
+                                .communityDetail(null)
+                                .replyMessage(new ReplyMessage(replyMessage.getMessageId(), replyMessage.getContent()))
                                 .build()
                 )
                 .createdAt(message.getCreatedAt())
@@ -140,6 +193,7 @@ public class SocketService {
                                 .isBookmarked(false)
                                 .placeDetail(makePlaceDetail(message.getMessageId()))
                                 .communityDetail(null)
+                                .replyMessage(null)
                                 .build()
                 )
                 .createdAt(message.getCreatedAt())
@@ -192,6 +246,7 @@ public class SocketService {
                         .isBookmarked(null)
                         .placeDetail(null)
                         .communityDetail(new CommunityDetail(postId, p.getTitle(), imageUrl))
+                        .replyMessage(null)
                         .build()
                 )
                 .createdAt(message.getCreatedAt())
@@ -212,6 +267,7 @@ public class SocketService {
                 .tag(null)
                 .placeDetail(null)
                 .communityDetail(null)
+                .replyMessage(null)
                 .build();
 
         MessageBookmark messageBookmark = messageBookmarkRepository.findByMessage_MessageId(messageId);
@@ -255,6 +311,7 @@ public class SocketService {
                 .isBookmarked(null)
                 .placeDetail(null)
                 .communityDetail(null)
+                .replyMessage(null)
                 .build();
 
         MessagePlace messagePlace = messagePlaceRepository.findByMessage_MessageId(messageId);
@@ -308,6 +365,7 @@ public class SocketService {
                 .isBookmarked(null)
                 .placeDetail(null)
                 .communityDetail(null)
+                .replyMessage(null)
                 .build();
 
         return MessageResponse.builder()
@@ -337,6 +395,7 @@ public class SocketService {
                 .isBookmarked(null)
                 .placeDetail(null)
                 .communityDetail(null)
+                .replyMessage(null)
                 .build();
 
         return MessageResponse.builder()
