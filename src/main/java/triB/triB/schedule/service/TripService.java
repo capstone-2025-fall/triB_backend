@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import triB.triB.auth.entity.User;
+import triB.triB.auth.entity.UserStatus;
 import triB.triB.budget.entity.TripUserBudget;
 import triB.triB.budget.repository.TripUserBudgetRepository;
 import triB.triB.room.entity.Room;
@@ -88,8 +89,7 @@ public class TripService {
         // 참여자 목록 조회
         List<User> participants = userRoomRepository.findUsersByRoomId(room.getRoomId());
         List<TripParticipantResponse> participantResponses = participants.stream()
-                .sorted(Comparator.comparing(user ->
-                        "(탈퇴한 사용자)".equals(user.getNickname())))
+                .filter(user -> user.getUserStatus().equals(UserStatus.ACTIVE))
                 .map(user -> TripParticipantResponse.builder()
                         .userId(user.getUserId())
                         .nickname(user.getNickname())

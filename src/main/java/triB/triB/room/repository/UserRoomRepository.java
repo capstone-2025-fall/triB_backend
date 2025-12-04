@@ -25,8 +25,8 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
             "order by coalesce((select max(m.createdAt) from Message m where m.room = ur.room), r.createdAt) desc")
     List<UserRoom> findAllWithRoomAndUsersByUser_UserIdAndRoom_RoomName(@Param("userId") Long userId, @Param("roomName") String roomName);
 
-    @Query("select distinct ur from UserRoom ur join fetch ur.user where ur.room.roomId in :roomIds order by ur.user.nickname asc")
-    List<UserRoom> findAllWithUsersByRoomIds(@Param("roomIds") List<Long> roomIds);
+    @Query("select distinct ur from UserRoom ur join fetch ur.user where ur.room.roomId in :roomIds and ur.user.userStatus = :userStatus order by ur.user.nickname asc")
+    List<UserRoom> findAllWithUsersByRoomIdsAndUserStatus(@Param("roomIds") List<Long> roomIds, @Param("userStatus") UserStatus userStatus);
 
     @Query("select ur.user from UserRoom ur where ur.room.roomId = :roomId order by ur.user.nickname asc")
     List<User> findUsersByRoomId(@Param("roomId") Long roomId);
@@ -40,13 +40,11 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
 
     UserRoom findByUser_UserIdAndRoom_RoomIdAndRoomStatus(Long userId, Long roomId, RoomStatus roomStatus);
 
-//    Long room(Room room);
-
     @Query("select count(ur.user) from UserRoom ur where ur.room.roomId = :roomId and ur.user.userStatus = :userStatus")
     Integer countByRoom_RoomIdAndUserStatus(@Param("roomId") Long roomId, @Param("userStatus") UserStatus userStatus);
 
-    @Query("select ur from UserRoom ur where ur.room.roomId = :roomId and ur.user.userId != :userId order by ur.user.nickname asc")
-    List<UserRoom> findByRoom_RoomIdAndNotUser_UserId(Long roomId, Long userId);
+    @Query("select ur from UserRoom ur where ur.room.roomId = :roomId and ur.user.userId != :userId and ur.user.userStatus = :userStatus order by ur.user.nickname asc")
+    List<UserRoom> findByRoom_RoomIdAndNotUser_UserIdAndUserStatus(Long roomId, Long userId, UserStatus userStatus);
 
     @Query(value = "select * from user_room ur where user_id = :userId and room_id = :roomId", nativeQuery = true)
     UserRoom findByUserIdAndRoomIdWithoutFilter(@Param("userId") Long userId, @Param("roomId") Long roomId);
