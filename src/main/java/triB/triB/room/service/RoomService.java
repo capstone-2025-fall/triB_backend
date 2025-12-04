@@ -207,7 +207,7 @@ public class RoomService {
         UserResponse me = new UserResponse(userId, user.getNickname(), user.getPhotoUrl());
         responses.add(me);
 
-        responses.addAll(userRoomRepository.findByRoom_RoomIdAndNotUser_UserId(roomId, userId).stream()
+        responses.addAll(userRoomRepository.findByRoom_RoomIdAndNotUser_UserIdAndUserStatus(roomId, userId, UserStatus.ACTIVE).stream()
                         .map(userRoom -> {
                             User u = userRoom.getUser();
                             return UserResponse.builder()
@@ -216,8 +216,6 @@ public class RoomService {
                                     .photoUrl(u.getPhotoUrl())
                                     .build();
                         })
-                .sorted(Comparator.comparing(response ->
-                        "(탈퇴한 사용자)".equals(response.getNickname())))
                 .toList());
         return responses;
     }
@@ -238,7 +236,7 @@ public class RoomService {
                 .toList();
 
         // 2. 모든 방의 사용자 정보를 단일 쿼리로 한번에 가져오기
-        List<UserRoom> allUsersInRoom = userRoomRepository.findAllWithUsersByRoomIds(roomIds);
+        List<UserRoom> allUsersInRoom = userRoomRepository.findAllWithUsersByRoomIdsAndUserStatus(roomIds, UserStatus.ACTIVE);
 
         Map<Long, List<String>> roomPhotoMap = allUsersInRoom.stream()
                 .collect(Collectors.groupingBy(
@@ -251,8 +249,6 @@ public class RoomService {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().stream()
-                                .sorted(Comparator.comparing(user ->
-                                        "(탈퇴한 사용자)".equals(user.getNickname())))
                                 .map(User::getPhotoUrl)
                                 .collect(Collectors.toList()),
                         (a, b) -> a,
