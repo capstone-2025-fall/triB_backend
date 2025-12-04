@@ -238,28 +238,18 @@ public class RoomService {
         // 2. 모든 방의 사용자 정보를 단일 쿼리로 한번에 가져오기
         List<UserRoom> allUsersInRoom = userRoomRepository.findAllWithUsersByRoomIdsAndUserStatus(roomIds, UserStatus.ACTIVE);
 
-        Map<Long, List<String>> roomPhotoMap = allUsersInRoom.stream()
+        Map<Long, Integer> peopleCountMap = allUsersInRoom.stream()
                 .collect(Collectors.groupingBy(
-                        ur -> ur.getRoom().getRoomId(),
-                        LinkedHashMap::new,
-                        Collectors.mapping(ur -> ur.getUser(),
-                                Collectors.toCollection(ArrayList::new))
-                ))
-                .entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().stream()
-                                .map(User::getPhotoUrl)
-                                .collect(Collectors.toList()),
-                        (a, b) -> a,
-                    LinkedHashMap::new
+                        ur -> ur.getId().roomId(),
+                        Collectors.collectingAndThen(Collectors.counting(), Long::intValue)
                 ));
 
-        List<Object[]> allPeopleNumInRoom = userRoomRepository.countByUserInRooms(roomIds, UserStatus.ACTIVE);
-        Map<Long, Integer> peopleCountMap = allPeopleNumInRoom.stream()
-                .collect(Collectors.toMap(
-                        arr -> (Long) arr[0],
-                        arr -> ((Number) arr[1]).intValue()
+        Map<Long, List<String>> roomPhotoMap = allUsersInRoom.stream()
+                .collect(Collectors.groupingBy(
+                        ur -> ur.getId().roomId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(ur -> ur.getUser().getPhotoUrl(),
+                                Collectors.toCollection(ArrayList::new))
                 ));
 
         // 3. 모든 방의 마지막 메세지를 한꺼번에 가져오기
