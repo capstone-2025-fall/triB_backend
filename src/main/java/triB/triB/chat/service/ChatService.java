@@ -128,128 +128,102 @@ public class ChatService {
                 .build();
     }
 
-    @Transactional
-    public Mono<Long> makeTrip(Long userId, Long roomId){
-        Room room = roomRepository.findById(roomId)
-                .orElseThrow(()-> new EntityNotFoundException("해당 룸이 존재하지 않습니다."));
-
+    public void startTripAsync(Long userId, Long roomId) {
+        // 동기적으로 권한 체크
         if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
             throw new BadCredentialsException("해당 권한이 없습니다.");
 
-        // Redis에 설정된 락있는지 확인
-        Boolean locked = redisClient.setIfAbsent("trip:create:lock", String.valueOf(roomId), String.valueOf(TripCreateStatus.WAITING),600);
+        // 동기적으로 락 획득 시도
+        Boolean locked = redisClient.setIfAbsent("trip:create:lock",
+                                                 String.valueOf(roomId),
+                                                 String.valueOf(TripCreateStatus.WAITING),
+                                                 600);
 
-        if (!locked){
+        if (!Boolean.TRUE.equals(locked)) {
             throw new CustomException(ErrorCode.TRIP_CREATING_IN_PROGRESS);
         }
 
+        // 락 획득 성공 후 비동기 작업 시작
         try {
-            List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId).stream()
-                    .filter(m -> m.getMessageStatus() != MessageStatus.DELETE)
-                    .toList();
-
-            List<ModelRequest.ModelPlaceRequest> places = new ArrayList<>();
-            List<String> mustVisit = new ArrayList<>();
-            List<String> rule = new ArrayList<>();
-            List<String> chat = new ArrayList<>();
-
-            MessagePlace place = null;
-            MessageBookmark bookmark = null;
-
-            for (Message message : messages) {
-                place = messagePlaceRepository.findByMessage_MessageId(message.getMessageId());
-                bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
-
-                String content = message.getContent();
-
-                if (message.getMessageType().equals(MessageType.COMMUNITY_SHARE)){
-                    Post p = postRepository.findById(Long.parseLong(content))
-                            .orElseThrow(() -> new EntityNotFoundException("해당 게시글이 존재하지 않습니다."));
-                    Long tripId = p.getTripId();
-
-                    List<Schedule> schedules = scheduleRepository.findByTripIdOrderByDayNumberAscVisitOrderAsc(tripId).stream()
-                            .filter(s -> s.getPlaceTag() != PlaceTag.HOME)
-                            .toList();
-
-                    schedules.forEach(s ->
-                            places.add(new ModelRequest.ModelPlaceRequest(s.getPlaceName(), s.getPlaceTag())));
-
-                } // 장소 태그가 저장 되어있고 북마크 되어있음
-                else if (place != null && bookmark != null){
-                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
-                    mustVisit.add(content);
-                } // 장소태그만 저장되어있음
-                else if (place != null) {
-                    places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
-                } // 북마크만 되어있음
-                else if (bookmark != null) {
-                    rule.add(content);
-                }
-                // 커뮤니티가 아닌 메세지의 경우 싹다 chat에 넣음
-                if (!message.getMessageType().equals(MessageType.COMMUNITY_SHARE))
-                    chat.add(content);
-            }
-
-            ModelRequest modelRequest = ModelRequest.builder()
-                    .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
-                    .startDate(room.getStartDate().toString())
-                    .country(room.getDestination())
-                    .members(userRoomRepository.countByRoom_RoomIdAndUserStatus(roomId, UserStatus.ACTIVE))
-                    .places(places)
-                    .mustVisit(mustVisit)
-                    .rule(rule)
-                    .chat(chat)
-                    .build();
-
-            log.info("places: {}", places);
-
-            log.info("모델 통신 시작");
-            return aiModelWebClient.post()
-                    .uri("/api/v2/itinerary/generate")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(modelRequest)
-                    .retrieve()
-                    .onStatus(
-                            HttpStatusCode::is4xxClientError,
-                            res -> res.createException().flatMap(e -> {
-                                log.error("AI 모델 요청 오류: {}", e.getMessage());
-                                publisher.publishEvent(new TripErrorEvent(roomId));
-                                return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
-                            })
-                    )
-                    .onStatus(
-                            HttpStatusCode::is5xxServerError,
-                            res -> res.createException().flatMap(e -> {
-                                log.error("AI 모델 서버 오류: {}", e.getMessage());
-                                publisher.publishEvent(new TripErrorEvent(roomId));
-                                return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
-                            })
-                    )
-                    .bodyToMono(ModelResponse.class)
-                    .map(body -> saveTripAndSchedule(room, body))
-                    .doFinally(signal -> {
-                        redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
-                        log.info("락 해제 완료: signal = {}", signal);
-                    })
-                    .onErrorResume(e -> {
-                        if (e instanceof CustomException) {
-                            log.error(e.getMessage());
-                            return Mono.error(e);
-                        }
-                        if (e instanceof WebClientRequestException) {
-                            publisher.publishEvent(new TripErrorEvent(roomId));
-                            log.error(e.getMessage());
-                            return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
-                        }
-                        publisher.publishEvent(new TripErrorEvent(roomId));
-                        log.error(e.getMessage());
-                        return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
-                    });
-        } catch (Exception e){
+            makeTrip(roomId)
+                    .subscribe(
+                            tripId -> log.info("Trip 생성 완료: roomId={}, tripId={}", roomId, tripId),
+                            err    -> log.error("Trip 생성 실패: roomId={}, err={}", roomId, err.toString())
+                    );
+        } catch (Exception e) {
+            // subscribe 시작 실패 시 락 해제
             redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
-            log.error("Trip 생성 중 오류 발생", e);
-            return Mono.error(new CustomException(ErrorCode.TRIP_PREPARATION_FAILED));
+            log.error("Trip 생성 시작 실패: roomId={}, err={}", roomId, e.getMessage());
+            throw e;
         }
+    }
+
+    protected Mono<Long> makeTrip(Long roomId){
+
+        return Mono.fromCallable(() ->
+                    roomRepository.findById(roomId)
+                            .orElseThrow(()-> new EntityNotFoundException("해당 룸이 존재하지 않습니다."))
+                )
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(room ->
+                        Mono.fromCallable(() -> buildModelRequest(roomId,room))
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .map(req -> Map.entry(room, req)))
+                .flatMap(entry -> {
+                    Room room = entry.getKey();
+                    ModelRequest modelRequest = entry.getValue();
+
+                    redisClient.setData("trip:create:lock", String.valueOf(roomId), String.valueOf(TripCreateStatus.RUNNING), 900);
+                    log.info("모델 통신 시작: roomId={}", roomId);
+
+                    return aiModelWebClient.post()
+                            .uri("/api/v2/itinerary/generate")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(modelRequest)
+                            .retrieve()
+                            .onStatus(
+                                    HttpStatusCode::is4xxClientError,
+                                    res -> res.createException().flatMap(e -> {
+                                        log.error("AI 모델 요청 오류: {}", e.getMessage());
+                                        publisher.publishEvent(new TripErrorEvent(roomId));
+                                        return Mono.error(new CustomException(ErrorCode.MODEL_REQUEST_ERROR));
+                                    })
+                            )
+                            .onStatus(
+                                    HttpStatusCode::is5xxServerError,
+                                    res -> res.createException().flatMap(e -> {
+                                        log.error("AI 모델 서버 오류: {}", e.getMessage());
+                                        publisher.publishEvent(new TripErrorEvent(roomId));
+                                        return Mono.error(new CustomException(ErrorCode.MODEL_ERROR));
+                                    })
+                            )
+                            .bodyToMono(ModelResponse.class)
+                            .map(body -> Map.entry(room, body));
+                })
+                .flatMap(entry ->
+                        Mono.fromCallable(() -> saveTripAndSchedule(entry.getKey(), entry.getValue()))
+                                .subscribeOn(Schedulers.boundedElastic())
+                )
+                .doOnSuccess(tripId -> {
+                    redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
+                    log.info("락 해제 완료(SUCCESS): roomId={}, tripId={}", roomId, tripId);
+                })
+                .onErrorResume(e -> {
+                    try {
+                        publisher.publishEvent(new TripErrorEvent(roomId));
+                    } catch (Exception ignore) { /* 이벤트 발행 실패 무시 */ }
+                    // 항상 락 해제
+                    redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
+                    log.info("락 해제 완료(FAIL): roomId={}", roomId);
+
+                    if (e instanceof CustomException) {
+                        return Mono.error(e);
+                    }
+                    if (e instanceof WebClientRequestException) {
+                        return Mono.error(new CustomException(ErrorCode.MODEL_CONNECTION_FAIL));
+                    }
+                    return Mono.error(new CustomException(ErrorCode.TRIP_SAVE_FAIL));
+                });
     }
 
     @Transactional
@@ -313,6 +287,64 @@ public class ChatService {
             return new TripCreateStatusResponse(TripCreateStatus.SUCCESS, t.getTripId());
         else
             return new TripCreateStatusResponse(TripCreateStatus.NOT_STARTED, null);
+    }
+
+    private ModelRequest buildModelRequest(Long roomId, Room room){
+        List<Message> messages = messageRepository.findAllByRoom_RoomIdOrderByCreatedAtAsc(roomId).stream()
+                .filter(m -> m.getMessageStatus() != MessageStatus.DELETE)
+                .toList();
+
+        List<ModelRequest.ModelPlaceRequest> places = new ArrayList<>();
+        List<String> mustVisit = new ArrayList<>();
+        List<String> rule = new ArrayList<>();
+        List<String> chat = new ArrayList<>();
+
+        MessagePlace place = null;
+        MessageBookmark bookmark = null;
+
+        for (Message message : messages) {
+            place = messagePlaceRepository.findByMessage_MessageId(message.getMessageId());
+            bookmark = messageBookmarkRepository.findByMessage_MessageId(message.getMessageId());
+
+            String content = message.getContent();
+
+            if (message.getMessageType().equals(MessageType.COMMUNITY_SHARE)){
+                Post p = postRepository.findById(Long.parseLong(content))
+                        .orElseThrow(() -> new EntityNotFoundException("해당 게시글이 존재하지 않습니다."));
+                Long tripId = p.getTripId();
+
+                List<Schedule> schedules = scheduleRepository.findByTripIdOrderByDayNumberAscVisitOrderAsc(tripId).stream()
+                        .filter(s -> s.getPlaceTag() != PlaceTag.HOME)
+                        .toList();
+
+                schedules.forEach(s ->
+                        places.add(new ModelRequest.ModelPlaceRequest(s.getPlaceName(), s.getPlaceTag())));
+
+            } // 장소 태그가 저장 되어있고 북마크 되어있음
+            else if (place != null && bookmark != null){
+                places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
+                mustVisit.add(content);
+            } // 장소태그만 저장되어있음
+            else if (place != null) {
+                places.add(new ModelRequest.ModelPlaceRequest(content, place.getPlaceTag()));
+            } // 북마크만 되어있음
+            else if (bookmark != null) {
+                rule.add(content);
+            }
+            // 커뮤니티가 아닌 메세지의 경우 싹다 chat에 넣음
+            if (!message.getMessageType().equals(MessageType.COMMUNITY_SHARE))
+                chat.add(content);
+        }
+        return ModelRequest.builder()
+                .days((int) ChronoUnit.DAYS.between(room.getStartDate(), room.getEndDate()) + 1)
+                .startDate(room.getStartDate().toString())
+                .country(room.getDestination())
+                .members(userRoomRepository.countByRoom_RoomIdAndUserStatus(roomId, UserStatus.ACTIVE))
+                .places(places)
+                .mustVisit(mustVisit)
+                .rule(rule)
+                .chat(chat)
+                .build();
     }
 
     private PlaceDetail makePlaceDetail(MessagePlaceDetail mpd){
