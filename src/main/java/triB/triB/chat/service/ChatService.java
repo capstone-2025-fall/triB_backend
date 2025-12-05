@@ -26,6 +26,7 @@ import triB.triB.chat.repository.MessagePlaceDetailRepository;
 import triB.triB.chat.repository.MessagePlaceRepository;
 import triB.triB.chat.repository.MessageRepository;
 import triB.triB.community.entity.Post;
+import triB.triB.community.repository.PostImageRepository;
 import triB.triB.community.repository.PostRepository;
 import triB.triB.friendship.dto.UserResponse;
 import triB.triB.global.exception.CustomException;
@@ -71,6 +72,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher publisher;
     private final PostRepository postRepository;
+    private final PostImageRepository postImageRepository;
 
     public RoomChatResponse getRoomMessages(Long userId, Long roomId){
         Room room = roomRepository.findById(roomId)
@@ -102,8 +104,37 @@ public class ChatService {
                     PlaceTag tag = placeTagMap.getOrDefault(message.getMessageId(), null);
                     Boolean isBookmarked = bookmarkMap.getOrDefault(message.getMessageId(), false);
                     PlaceDetail placeDetail = makePlaceDetail(placeDetailMap.getOrDefault(message.getMessageId(), null));
+
+                    CommunityDetail communityDetail = null;
+                    if (message.getMessageType() == MessageType.COMMUNITY_SHARE) {
+                        Post p = postRepository.findById(Long.parseLong(message.getContent())).orElse(null);
+                        if (p != null) {
+                            String imageUrl = postImageRepository.findImageUrlByPostId(p.getPostId());
+                            communityDetail = new CommunityDetail(p.getPostId(), p.getTitle(), imageUrl);
+                        } else {
+                            message.setMessageType(MessageType.TEXT);
+                            message.setMessageStatus(MessageStatus.DELETE);
+                            message.setContent("삭제된 게시글입니다.");
+                            messageRepository.save(message);
+                        }
+                    }
+
                     Message reply = message.getReplyMessage();
-                    ReplyMessage replyMessage = (reply != null) ? new ReplyMessage(reply.getMessageId(), reply.getContent()) : null;
+                    ReplyMessage replyMessage = null;
+                    if (reply != null) {
+                        String replyContent;
+                        if (reply.getMessageStatus() == MessageStatus.DELETE) {
+                            replyContent = "삭제된 메세지입니다.";
+                        } else if (reply.getMessageType() == MessageType.COMMUNITY_SHARE) {
+                            replyContent = postRepository.findTitleByPostId(Long.parseLong(reply.getContent()));
+                            if (replyContent == null) {
+                                replyContent = "삭제된 게시글입니다.";
+                            }
+                        } else {
+                            replyContent = reply.getContent();
+                        }
+                        replyMessage = new ReplyMessage(reply.getMessageId(), replyContent);
+                    }
 
                     return MessageResponse.builder()
                             .actionType(null)
@@ -117,6 +148,7 @@ public class ChatService {
                                             .tag(tag)
                                             .isBookmarked(isBookmarked)
                                             .placeDetail(placeDetail)
+                                            .communityDetail(communityDetail)
                                             .replyMessage(replyMessage)
                                             .build()
                             )

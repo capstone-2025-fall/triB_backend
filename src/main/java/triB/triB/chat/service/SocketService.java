@@ -383,6 +383,7 @@ public class SocketService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 메세지가 존재하지 않습니다."));
 
         message.setMessageStatus(MessageStatus.DELETE);
+        message.setContent("삭제된 메세지입니다.");
         message.setUpdatedAt(LocalDateTime.now());
         messageRepository.save(message);
 
