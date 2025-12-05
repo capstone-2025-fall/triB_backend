@@ -47,4 +47,6 @@ public interface UserRoomRepository extends JpaRepository<UserRoom, UserRoomId> 
     @Query(value = "select * from user_room ur where user_id = :userId and room_id = :roomId", nativeQuery = true)
     UserRoom findByUserIdAndRoomIdWithoutFilter(@Param("userId") Long userId, @Param("roomId") Long roomId);
 
+    @Query("select u.user.photoUrl from UserRoom u where u.room.roomId = :roomId and u.user.userStatus = :userStatus order by u.user.nickname asc")
+    List<String> findAllByRoom_RoomIdAndUserStatus(@Param("roomId") Long roomId, @Param("userStatus") UserStatus userStatus);
 }

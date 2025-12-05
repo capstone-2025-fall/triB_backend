@@ -220,6 +220,34 @@ public class RoomService {
         return responses;
     }
 
+    public RoomInfoResponse getRoomInfo(Long roomId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        return RoomInfoResponse.builder()
+                .roomId(room.getRoomId())
+                .roomName(room.getRoomName())
+                .startDate(room.getStartDate())
+                .endDate(room.getEndDate())
+                .destination(null)
+                .photoUrls(null)
+                .build();
+    }
+
+    public RoomInfoResponse getRoomInfoByEdit(Long roomId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방이 존재하지 않습니다."));
+
+        return RoomInfoResponse.builder()
+                .roomId(room.getRoomId())
+                .roomName(room.getRoomName())
+                .startDate(room.getStartDate())
+                .endDate(room.getEndDate())
+                .destination(room.getDestination())
+                .photoUrls(userRoomRepository.findAllByRoom_RoomIdAndUserStatus(roomId, UserStatus.ACTIVE))
+                .build();
+    }
+
     private List<RoomsResponse> roomList(List<UserRoom> userRooms, Long userId) {
         if (userRooms.isEmpty()) {
             log.info("유저가 참여한 채팅방이 없습니다.");
@@ -274,15 +302,16 @@ public class RoomService {
             String content = null;
             if (msg != null) {
                 if (msg.getMessageStatus() != MessageStatus.DELETE) {
-                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE)
+                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE) {
                         content = postRepository.findTitleByPostId(Long.parseLong(msg.getContent()));
-                    else
+                        if (content == null) {
+                            content = "삭제된 게시글입니다.";
+                        }
+                    } else {
                         content = msg.getContent();
+                    }
                 } else {
-                    if (msg.getMessageType() == MessageType.COMMUNITY_SHARE)
-                        content = "삭제된 게시글입니다.";
-                    else
-                        content = "삭제된 메세지입니다.";
+                    content = "삭제된 메세지입니다.";
                 }
             }
             RoomsResponse response = RoomsResponse.builder()
