@@ -102,7 +102,8 @@ public class ChatService {
                     PlaceTag tag = placeTagMap.getOrDefault(message.getMessageId(), null);
                     Boolean isBookmarked = bookmarkMap.getOrDefault(message.getMessageId(), false);
                     PlaceDetail placeDetail = makePlaceDetail(placeDetailMap.getOrDefault(message.getMessageId(), null));
-                    ReplyMessage replyMessage = new ReplyMessage(message.getReplyMessage().getMessageId(), message.getReplyMessage().getContent());
+                    Message reply = message.getReplyMessage();
+                    ReplyMessage replyMessage = (reply != null) ? new ReplyMessage(reply.getMessageId(), reply.getContent()) : null;
 
                     return MessageResponse.builder()
                             .actionType(null)

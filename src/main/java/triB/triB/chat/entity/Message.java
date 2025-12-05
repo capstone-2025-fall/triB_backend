@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_room_id", columnList = "room_id"),
                 @Index(name = "idx_created_at", columnList = "created_at"),
-                @Index(name = "idx_msg_type_content", columnList = "message_type, content")
+                @Index(name = "idx_msg_type", columnList = "message_type")
         }
 )
 public class Message {
