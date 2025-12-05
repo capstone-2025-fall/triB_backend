@@ -129,40 +129,41 @@ public class ChatService {
     }
 
     public void startTripAsync(Long userId, Long roomId) {
+        // 동기적으로 권한 체크
+        if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
+            throw new BadCredentialsException("해당 권한이 없습니다.");
+
+        // 동기적으로 락 획득 시도
+        Boolean locked = redisClient.setIfAbsent("trip:create:lock",
+                                                 String.valueOf(roomId),
+                                                 String.valueOf(TripCreateStatus.WAITING),
+                                                 600);
+
+        if (!Boolean.TRUE.equals(locked)) {
+            throw new CustomException(ErrorCode.TRIP_CREATING_IN_PROGRESS);
+        }
+
+        // 락 획득 성공 후 비동기 작업 시작
         try {
-            // makeTrip() 내부에서 모든 후처리(락 해제/푸시 이벤트)가 이루어지므로 여기서는 시작만
-            makeTrip(userId, roomId)
+            makeTrip(roomId)
                     .subscribe(
                             tripId -> log.info("Trip 생성 완료: roomId={}, tripId={}", roomId, tripId),
                             err    -> log.error("Trip 생성 실패: roomId={}, err={}", roomId, err.toString())
                     );
-        } catch (CustomException e) {
-            // setIfAbsent 실패 등 "Mono 생성 전" 예외는 여기로 옴
-            throw e;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            // subscribe 시작 실패 시 락 해제
+            redisClient.deleteData("trip:create:lock", String.valueOf(roomId));
+            log.error("Trip 생성 시작 실패: roomId={}, err={}", roomId, e.getMessage());
             throw e;
         }
     }
 
-    @Transactional
-    protected Mono<Long> makeTrip(Long userId, Long roomId){
+    protected Mono<Long> makeTrip(Long roomId){
 
-        return Mono.fromCallable(() -> {
-                    Room room = roomRepository.findById(roomId)
-                            .orElseThrow(()-> new EntityNotFoundException("해당 룸이 존재하지 않습니다."));
-
-                    if (!userRoomRepository.existsByUser_UserIdAndRoom_RoomId(userId, roomId))
-                        throw new BadCredentialsException("해당 권한이 없습니다.");
-
-                    // Redis에 설정된 락있는지 확인
-                    Boolean locked = redisClient.setIfAbsent("trip:create:lock", String.valueOf(roomId), String.valueOf(TripCreateStatus.WAITING),600);
-
-                    if (!Boolean.TRUE.equals(locked)) {
-                        throw new CustomException(ErrorCode.TRIP_CREATING_IN_PROGRESS);
-                    }
-
-                    return room;
-                })
+        return Mono.fromCallable(() ->
+                    roomRepository.findById(roomId)
+                            .orElseThrow(()-> new EntityNotFoundException("해당 룸이 존재하지 않습니다."))
+                )
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(room ->
                         Mono.fromCallable(() -> buildModelRequest(roomId,room))
