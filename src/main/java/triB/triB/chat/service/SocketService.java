@@ -347,6 +347,7 @@ public class SocketService {
                 .build();
     }
 
+    @Transactional
     public void saveLastReadMessage(Long userId, Long roomId) {
         Long messageId = messageRepository.findLastReadMessageIdByRoom_RoomId(roomId);
         if (messageId == null) {
