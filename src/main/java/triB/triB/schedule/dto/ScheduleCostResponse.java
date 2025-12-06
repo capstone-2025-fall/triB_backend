@@ -23,4 +23,7 @@ public class ScheduleCostResponse {
 
     @Schema(description = "비용 설명", example = "입장료 및 식사 비용 포함")
     private String costExplanation;
+
+    @Schema(description = "숙박 비용 정보", example = "1박당 15만원 예상")
+    private String accommodationCostInfo;
 }

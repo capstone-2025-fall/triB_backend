@@ -92,7 +92,7 @@ class ScheduleControllerTest {
                 .arrival(LocalDateTime.of(2025, 1, 1, 9, 0))
                 .departure(LocalDateTime.of(2025, 1, 1, 10, 0))
                 .placeTag(PlaceTag.TOURIST_SPOT)
-                .travelTime("30분")
+                .travelTime(30)
                 .visitOrder(1)
                 .isVisit(false)
                 .build();
@@ -413,7 +413,7 @@ class ScheduleControllerTest {
                 .placeTag(PlaceTag.HOME)
                 .arrival(LocalDateTime.of(2025, 1, 1, 18, 0))
                 .departure(LocalDateTime.of(2025, 1, 2, 9, 0))
-                .travelTime("1시간")
+                .travelTime(60)
                 .visitOrder(2)
                 .isVisit(false)
                 .build();
@@ -467,7 +467,7 @@ class ScheduleControllerTest {
                 .placeTag(PlaceTag.HOME)
                 .arrival(LocalDateTime.of(2025, 1, 1, 18, 0))
                 .departure(LocalDateTime.of(2025, 1, 2, 9, 0))
-                .travelTime("1시간 15분")
+                .travelTime(75)
                 .visitOrder(2)
                 .isVisit(false)
                 .build();

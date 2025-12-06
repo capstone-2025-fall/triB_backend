@@ -218,6 +218,10 @@ public class ScheduleService {
         // 권한 검증
         validateUserInTrip(tripId, userId);
 
+        // Trip 조회 (accommodationCostInfo를 위해 필요)
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
         // Schedule 조회
         Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
@@ -227,6 +231,7 @@ public class ScheduleService {
                 .scheduleId(schedule.getScheduleId())
                 .estimatedCost(schedule.getEstimatedCost())
                 .costExplanation(schedule.getCostExplanation())
+                .accommodationCostInfo(trip.getAccommodationCostInfo())
                 .build();
     }
 

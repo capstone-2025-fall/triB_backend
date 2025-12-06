@@ -149,7 +149,7 @@ public class ScheduleController {
     @GetMapping("/trips/{tripId}/schedules/{scheduleId}/cost")
     @Operation(
             summary = "일정 비용 정보 조회",
-            description = "특정 일정의 예상 비용과 비용 설명을 조회합니다."
+            description = "특정 일정의 예상 비용, 비용 설명, 그리고 여행의 숙박 비용 정보를 조회합니다."
     )
     public ResponseEntity<ApiResponse<ScheduleCostResponse>> getScheduleCost(
             @Parameter(description = "여행 ID", required = true)

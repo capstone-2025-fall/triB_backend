@@ -854,6 +854,15 @@ class ScheduleServiceTest {
     void getScheduleCost_Success_WithCostInfo() {
         // given
         Long scheduleId = 1L;
+
+        Trip tripWithAccommodationInfo = Trip.builder()
+                .tripId(tripId)
+                .roomId(roomId)
+                .destination("Seoul")
+                .travelMode(TravelMode.DRIVE)
+                .accommodationCostInfo("1박당 15만원 예상")
+                .build();
+
         Schedule scheduleWithCost = Schedule.builder()
                 .scheduleId(scheduleId)
                 .tripId(tripId)
@@ -872,7 +881,7 @@ class ScheduleServiceTest {
                 .costExplanation("입장료 및 식사 비용 포함")
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithAccommodationInfo));
         when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
         when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
                 .thenReturn(Optional.of(scheduleWithCost));
@@ -885,8 +894,10 @@ class ScheduleServiceTest {
         assertThat(response.getScheduleId()).isEqualTo(scheduleId);
         assertThat(response.getEstimatedCost()).isEqualTo(50000);
         assertThat(response.getCostExplanation()).isEqualTo("입장료 및 식사 비용 포함");
+        assertThat(response.getAccommodationCostInfo()).isEqualTo("1박당 15만원 예상");
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
@@ -894,6 +905,15 @@ class ScheduleServiceTest {
     void getScheduleCost_Success_WithoutCostInfo() {
         // given
         Long scheduleId = 1L;
+
+        Trip tripWithoutAccommodationInfo = Trip.builder()
+                .tripId(tripId)
+                .roomId(roomId)
+                .destination("Seoul")
+                .travelMode(TravelMode.DRIVE)
+                .accommodationCostInfo(null)
+                .build();
+
         Schedule scheduleWithoutCost = Schedule.builder()
                 .scheduleId(scheduleId)
                 .tripId(tripId)
@@ -912,7 +932,7 @@ class ScheduleServiceTest {
                 .costExplanation(null)
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithoutAccommodationInfo));
         when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
         when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
                 .thenReturn(Optional.of(scheduleWithoutCost));
@@ -925,8 +945,10 @@ class ScheduleServiceTest {
         assertThat(response.getScheduleId()).isEqualTo(scheduleId);
         assertThat(response.getEstimatedCost()).isNull();
         assertThat(response.getCostExplanation()).isNull();
+        assertThat(response.getAccommodationCostInfo()).isNull();
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
@@ -946,6 +968,7 @@ class ScheduleServiceTest {
                 .hasMessage("일정을 찾을 수 없습니다.");
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
+        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
