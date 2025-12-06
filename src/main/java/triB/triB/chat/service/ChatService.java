@@ -124,7 +124,8 @@ public class ChatService {
                     if (reply != null) {
                         String replyContent;
                         if (reply.getMessageStatus() == MessageStatus.DELETE) {
-                            replyContent = "삭제된 메세지입니다.";
+                            // 삭제된 커뮤니티 게시글인 경우 내용을 그대로 사용
+                            replyContent = reply.getContent();
                         } else if (reply.getMessageType() == MessageType.COMMUNITY_SHARE) {
                             replyContent = postRepository.findTitleByPostId(Long.parseLong(reply.getContent()));
                             if (replyContent == null) {
@@ -273,6 +274,7 @@ public class ChatService {
                 .destination(room.getDestination())
                 .versionStatus(VersionStatus.NEW)
                 .travelMode(body.getTravelMode())
+//                .accommodationCostInfo(body.getAccommodationCostInfo())
                 .budget(body.getBudget())
                 .build();
         tripRepository.save(t);
