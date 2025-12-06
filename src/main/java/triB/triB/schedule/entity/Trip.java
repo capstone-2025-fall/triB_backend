@@ -62,6 +62,9 @@ public class Trip {
     @Column(name = "budget")
     private Integer budget;
 
+    @Column(name = "accommodation_cost_info")
+    private String accommodationCostInfo;
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

@@ -311,7 +311,8 @@ public class RoomService {
                         content = msg.getContent();
                     }
                 } else {
-                    content = "삭제된 메세지입니다.";
+                    // 삭제된 커뮤니티 게시글인 경우 내용을 그대로 사용
+                    content = msg.getContent();
                 }
             }
             RoomsResponse response = RoomsResponse.builder()

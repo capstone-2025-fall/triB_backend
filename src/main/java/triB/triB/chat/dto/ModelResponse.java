@@ -18,6 +18,7 @@ import java.util.List;
 public class ModelResponse {
     private Integer budget;
     private TravelMode travelMode;
+    private String accommodationCostInfo;
     private List<Itinerary> itinerary;
 
     @Getter
