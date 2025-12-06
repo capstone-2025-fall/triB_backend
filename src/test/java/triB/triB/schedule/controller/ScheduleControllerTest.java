@@ -525,4 +525,44 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("숙소(PlaceTag.HOME)만 변경할 수 있습니다."));
     }
+
+    @Test
+    @DisplayName("GET /api/v1/trips/{tripId}/accommodation-cost - 숙박 비용 정보 조회 성공")
+    void getAccommodationCost_Success() throws Exception {
+        // given
+        AccommodationCostResponse mockResponse = AccommodationCostResponse.builder()
+                .accommodationCostInfo("1박당 15만원 예상")
+                .build();
+
+        when(scheduleService.getAccommodationCost(eq(tripId), eq(userId)))
+                .thenReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/trips/{tripId}/accommodation-cost", tripId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("숙박 비용 정보를 조회했습니다."))
+                .andExpect(jsonPath("$.data.accommodationCostInfo").value("1박당 15만원 예상"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/trips/{tripId}/accommodation-cost - 숙박 비용 정보가 없는 경우")
+    void getAccommodationCost_Success_NullInfo() throws Exception {
+        // given
+        AccommodationCostResponse mockResponse = AccommodationCostResponse.builder()
+                .accommodationCostInfo(null)
+                .build();
+
+        when(scheduleService.getAccommodationCost(eq(tripId), eq(userId)))
+                .thenReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/trips/{tripId}/accommodation-cost", tripId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.accommodationCostInfo").isEmpty());
+    }
 }

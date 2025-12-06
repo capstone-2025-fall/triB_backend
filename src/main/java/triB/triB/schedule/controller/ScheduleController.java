@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
+import triB.triB.schedule.dto.AccommodationCostResponse;
 import triB.triB.schedule.dto.AddScheduleRequest;
 import triB.triB.schedule.dto.BatchUpdateScheduleRequest;
 import triB.triB.schedule.dto.DeleteScheduleResponse;
@@ -149,7 +150,7 @@ public class ScheduleController {
     @GetMapping("/trips/{tripId}/schedules/{scheduleId}/cost")
     @Operation(
             summary = "일정 비용 정보 조회",
-            description = "특정 일정의 예상 비용, 비용 설명, 그리고 여행의 숙박 비용 정보를 조회합니다."
+            description = "특정 일정의 예상 비용과 비용 설명을 조회합니다."
     )
     public ResponseEntity<ApiResponse<ScheduleCostResponse>> getScheduleCost(
             @Parameter(description = "여행 ID", required = true)
@@ -167,6 +168,25 @@ public class ScheduleController {
         );
 
         return ApiResponse.ok("일정 비용 정보를 조회했습니다.", response);
+    }
+
+    @GetMapping("/trips/{tripId}/accommodation-cost")
+    @Operation(
+            summary = "여행 숙박 비용 정보 조회",
+            description = "특정 여행의 전체 숙박 비용 정보를 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<AccommodationCostResponse>> getAccommodationCost(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        AccommodationCostResponse response = scheduleService.getAccommodationCost(
+                tripId,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("숙박 비용 정보를 조회했습니다.", response);
     }
 
     @PatchMapping("/trips/{tripId}/schedules/{scheduleId}/reorder")

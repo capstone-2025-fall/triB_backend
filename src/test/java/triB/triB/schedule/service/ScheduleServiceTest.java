@@ -854,15 +854,6 @@ class ScheduleServiceTest {
     void getScheduleCost_Success_WithCostInfo() {
         // given
         Long scheduleId = 1L;
-
-        Trip tripWithAccommodationInfo = Trip.builder()
-                .tripId(tripId)
-                .roomId(roomId)
-                .destination("Seoul")
-                .travelMode(TravelMode.DRIVE)
-                .accommodationCostInfo("1박당 15만원 예상")
-                .build();
-
         Schedule scheduleWithCost = Schedule.builder()
                 .scheduleId(scheduleId)
                 .tripId(tripId)
@@ -881,7 +872,7 @@ class ScheduleServiceTest {
                 .costExplanation("입장료 및 식사 비용 포함")
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithAccommodationInfo));
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
         when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
         when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
                 .thenReturn(Optional.of(scheduleWithCost));
@@ -894,10 +885,8 @@ class ScheduleServiceTest {
         assertThat(response.getScheduleId()).isEqualTo(scheduleId);
         assertThat(response.getEstimatedCost()).isEqualTo(50000);
         assertThat(response.getCostExplanation()).isEqualTo("입장료 및 식사 비용 포함");
-        assertThat(response.getAccommodationCostInfo()).isEqualTo("1박당 15만원 예상");
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
-        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
@@ -905,15 +894,6 @@ class ScheduleServiceTest {
     void getScheduleCost_Success_WithoutCostInfo() {
         // given
         Long scheduleId = 1L;
-
-        Trip tripWithoutAccommodationInfo = Trip.builder()
-                .tripId(tripId)
-                .roomId(roomId)
-                .destination("Seoul")
-                .travelMode(TravelMode.DRIVE)
-                .accommodationCostInfo(null)
-                .build();
-
         Schedule scheduleWithoutCost = Schedule.builder()
                 .scheduleId(scheduleId)
                 .tripId(tripId)
@@ -932,7 +912,7 @@ class ScheduleServiceTest {
                 .costExplanation(null)
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithoutAccommodationInfo));
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
         when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
         when(scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId))
                 .thenReturn(Optional.of(scheduleWithoutCost));
@@ -945,10 +925,8 @@ class ScheduleServiceTest {
         assertThat(response.getScheduleId()).isEqualTo(scheduleId);
         assertThat(response.getEstimatedCost()).isNull();
         assertThat(response.getCostExplanation()).isNull();
-        assertThat(response.getAccommodationCostInfo()).isNull();
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
-        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
@@ -968,7 +946,6 @@ class ScheduleServiceTest {
                 .hasMessage("일정을 찾을 수 없습니다.");
 
         verify(scheduleRepository).findByScheduleIdAndTripId(scheduleId, tripId);
-        verify(tripRepository, times(2)).findById(tripId);
     }
 
     @Test
@@ -988,5 +965,87 @@ class ScheduleServiceTest {
 
         verify(userRoomRepository).existsById(any(UserRoomId.class));
         verify(scheduleRepository, never()).findByScheduleIdAndTripId(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("숙박 비용 정보 조회 성공 - 정보가 있는 경우")
+    void getAccommodationCost_Success_WithInfo() {
+        // given
+        Trip tripWithAccommodationInfo = Trip.builder()
+                .tripId(tripId)
+                .roomId(roomId)
+                .destination("Seoul")
+                .accommodationCostInfo("1박당 15만원 예상")
+                .build();
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithAccommodationInfo));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+
+        // when
+        AccommodationCostResponse response = scheduleService.getAccommodationCost(tripId, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getAccommodationCostInfo()).isEqualTo("1박당 15만원 예상");
+
+        verify(tripRepository, times(2)).findById(tripId);
+        verify(userRoomRepository).existsById(any(UserRoomId.class));
+    }
+
+    @Test
+    @DisplayName("숙박 비용 정보 조회 성공 - 정보가 없는 경우 (null)")
+    void getAccommodationCost_Success_WithoutInfo() {
+        // given
+        Trip tripWithoutAccommodationInfo = Trip.builder()
+                .tripId(tripId)
+                .roomId(roomId)
+                .destination("Seoul")
+                .accommodationCostInfo(null)
+                .build();
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(tripWithoutAccommodationInfo));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(true);
+
+        // when
+        AccommodationCostResponse response = scheduleService.getAccommodationCost(tripId, userId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getAccommodationCostInfo()).isNull();
+
+        verify(tripRepository, times(2)).findById(tripId);
+    }
+
+    @Test
+    @DisplayName("숙박 비용 정보 조회 실패 - 존재하지 않는 여행")
+    void getAccommodationCost_Fail_TripNotFound() {
+        // given
+        Long invalidTripId = 999L;
+
+        when(tripRepository.findById(invalidTripId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> scheduleService.getAccommodationCost(invalidTripId, userId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("여행을 찾을 수 없습니다.");
+
+        verify(tripRepository).findById(invalidTripId);
+    }
+
+    @Test
+    @DisplayName("숙박 비용 정보 조회 실패 - 권한 없는 사용자")
+    void getAccommodationCost_Fail_Unauthorized() {
+        // given
+        Long unauthorizedUserId = 999L;
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(testTrip));
+        when(userRoomRepository.existsById(any(UserRoomId.class))).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> scheduleService.getAccommodationCost(tripId, unauthorizedUserId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("해당 여행에 접근 권한이 없습니다.");
+
+        verify(userRoomRepository).existsById(any(UserRoomId.class));
     }
 }

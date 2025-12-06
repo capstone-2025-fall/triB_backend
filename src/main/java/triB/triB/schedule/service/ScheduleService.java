@@ -12,6 +12,7 @@ import triB.triB.room.entity.UserRoomId;
 import triB.triB.room.repository.RoomRepository;
 import triB.triB.room.repository.UserRoomRepository;
 import triB.triB.chat.entity.PlaceTag;
+import triB.triB.schedule.dto.AccommodationCostResponse;
 import triB.triB.schedule.dto.AddScheduleRequest;
 import triB.triB.schedule.dto.BatchUpdateScheduleRequest;
 import triB.triB.schedule.dto.DeleteScheduleResponse;
@@ -218,10 +219,6 @@ public class ScheduleService {
         // 권한 검증
         validateUserInTrip(tripId, userId);
 
-        // Trip 조회 (accommodationCostInfo를 위해 필요)
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
-
         // Schedule 조회
         Schedule schedule = scheduleRepository.findByScheduleIdAndTripId(scheduleId, tripId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
@@ -231,6 +228,22 @@ public class ScheduleService {
                 .scheduleId(schedule.getScheduleId())
                 .estimatedCost(schedule.getEstimatedCost())
                 .costExplanation(schedule.getCostExplanation())
+                .build();
+    }
+
+    /**
+     * 여행의 숙박 비용 정보 조회
+     */
+    public AccommodationCostResponse getAccommodationCost(Long tripId, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // Trip 조회
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("여행을 찾을 수 없습니다."));
+
+        // 응답 DTO 생성 및 반환
+        return AccommodationCostResponse.builder()
                 .accommodationCostInfo(trip.getAccommodationCostInfo())
                 .build();
     }
