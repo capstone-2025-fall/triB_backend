@@ -274,7 +274,7 @@ public class ChatService {
                 .destination(room.getDestination())
                 .versionStatus(VersionStatus.NEW)
                 .travelMode(body.getTravelMode())
-//                .accommodationCostInfo(body.getAccommodationCostInfo())
+                .accommodationCostInfo(body.getAccommodationCostInfo())
                 .budget(body.getBudget())
                 .build();
         tripRepository.save(t);
