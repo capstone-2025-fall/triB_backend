@@ -232,6 +232,26 @@ public class ScheduleService {
     }
 
     /**
+     * 여행의 모든 일정 비용 정보 조회 (숙소 제외)
+     */
+    public List<ScheduleCostResponse> getAllScheduleCosts(Long tripId, Long userId) {
+        // 권한 검증
+        validateUserInTrip(tripId, userId);
+
+        // 숙소를 제외한 모든 일정 조회
+        List<Schedule> schedules = scheduleRepository.findByTripIdExcludingHome(tripId);
+
+        // Schedule 리스트를 ScheduleCostResponse로 매핑
+        return schedules.stream()
+                .map(schedule -> ScheduleCostResponse.builder()
+                        .scheduleId(schedule.getScheduleId())
+                        .estimatedCost(schedule.getEstimatedCost())
+                        .costExplanation(schedule.getCostExplanation())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 여행의 숙박 비용 정보 조회
      */
     public AccommodationCostResponse getAccommodationCost(Long tripId, Long userId) {

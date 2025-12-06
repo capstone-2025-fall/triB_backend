@@ -170,6 +170,25 @@ public class ScheduleController {
         return ApiResponse.ok("일정 비용 정보를 조회했습니다.", response);
     }
 
+    @GetMapping("/trips/{tripId}/schedules/cost")
+    @Operation(
+            summary = "여행 전체 일정 비용 정보 조회",
+            description = "특정 여행의 모든 일정(숙소 제외)에 대한 예상 비용과 비용 설명을 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<List<ScheduleCostResponse>>> getAllScheduleCosts(
+            @Parameter(description = "여행 ID", required = true)
+            @PathVariable Long tripId,
+
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        List<ScheduleCostResponse> response = scheduleService.getAllScheduleCosts(
+                tripId,
+                userPrincipal.getUserId()
+        );
+
+        return ApiResponse.ok("전체 일정 비용 정보를 조회했습니다.", response);
+    }
+
     @GetMapping("/trips/{tripId}/accommodation-cost")
     @Operation(
             summary = "여행 숙박 비용 정보 조회",
