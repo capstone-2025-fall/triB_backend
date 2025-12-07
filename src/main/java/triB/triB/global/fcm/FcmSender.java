@@ -20,6 +20,12 @@ public class FcmSender {
                 .setAndroidConfig(AndroidConfig.builder()
                         .setCollapseKey(fcmSendRequest.getRequestType().toString())
                         .build())
+                .setApnsConfig(ApnsConfig.builder()
+                        .setAps(Aps.builder()
+                                .setContentAvailable(true)
+                                .setMutableContent(true)
+                                .build())
+                        .build())
                 .build();
         FirebaseMessaging.getInstance().send(message);
     }
