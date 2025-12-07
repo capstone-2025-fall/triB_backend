@@ -323,7 +323,7 @@ public class RoomService {
                     .startDate(r.getStartDate())
                     .endDate(r.getEndDate())
                     .content(content)
-                    .createdAt(r.getCreatedAt())
+                    .createdAt(msg != null ? msg.getCreatedAt() : null)
                     .messageNum(notReadMessageTotalMap.getOrDefault(r.getRoomId(), 0))
                     .people(peopleCountMap.getOrDefault(r.getRoomId(), 0))
                     .build();
