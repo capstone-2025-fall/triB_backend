@@ -59,10 +59,10 @@ public class Trip {
     @Enumerated(EnumType.STRING)
     private TravelMode travelMode;
 
-    @Column(name = "budget")
+    @Column(name = "budget", nullable = true)
     private Integer budget;
 
-    @Column(name = "accommodation_cost_info")
+    @Column(name = "accommodation_cost_info", nullable = true)
     private String accommodationCostInfo;
 
     @Column(name = "created_at", nullable = false)
