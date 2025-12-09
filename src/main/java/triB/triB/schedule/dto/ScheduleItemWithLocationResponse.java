@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import triB.triB.chat.entity.PlaceTag;
+import triB.triB.schedule.entity.TravelMode;
 
 import java.time.LocalDateTime;
 
@@ -34,6 +35,9 @@ public class ScheduleItemWithLocationResponse {
 
     @Schema(description = "다음 장소까지의 이동 시간 (분 단위)", example = "30")
     private Integer travelTime;
+
+    @Schema(description = "다음 장소까지의 이동 수단", example = "DRIVE")
+    private TravelMode travelMode;
 
     @Schema(description = "방문 순서", example = "1")
     private Integer visitOrder;

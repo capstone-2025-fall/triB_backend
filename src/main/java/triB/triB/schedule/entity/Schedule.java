@@ -61,6 +61,10 @@ public class Schedule {
     @Column(name = "travel_time", nullable = true)
     private String travelTime;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "travel_mode", nullable = true)
+    private TravelMode travelMode;
+
     @Column(name = "estimated_cost", nullable = true)
     private Integer estimatedCost;
 

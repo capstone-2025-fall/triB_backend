@@ -1032,6 +1032,7 @@ public class ScheduleService {
                 .departure(schedule.getDeparture())
                 .placeTag(schedule.getPlaceTag())
                 .travelTime(parseTravelTimeToMinutes(schedule.getTravelTime()))
+                .travelMode(schedule.getTravelMode())
                 .visitOrder(schedule.getVisitOrder())
                 .isVisit(schedule.getIsVisit())
                 .latitude(schedule.getLatitude())
