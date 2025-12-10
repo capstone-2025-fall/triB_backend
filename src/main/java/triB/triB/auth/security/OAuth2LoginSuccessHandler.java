@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 소셜로그인 성공시 자동 실행
@@ -86,28 +87,74 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         Optional<OauthAccount> existUser = oauthAccountRepository.findByProviderAndProviderUserId(provider, providerId);
 
         String targetUrl;
+
         if (existUser.isEmpty()) {
-            log.info("신규 유저 입니다. 회원가입 페이지로 리디렉션합니다.");
-            String registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname);
-            log.info("registerToken = {}", registerToken);
+            if (provider.equals("apple")) {
+                log.info("apple 회원가입입니다. 즉시 회원가입 처리합니다.");
+                String email = oAuth2UserInfo.getEmail();
+                log.info("email = {}", email);
+                log.info("nickname = {}", nickname);
+                String username = email.split("@")[0] + String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
+                log.info("username = {}", username);
 
-            Map<String, Object> body = new HashMap<>();
-            body.put("isNewUser", true);
-            body.put("registerToken", registerToken);
-            body.put("photoUrl", photoUrl);
-            body.put("nickname", nickname);
+                User newUser = User.builder()
+                        .email(null)
+                        .password(null)
+                        .nickname(nickname)
+                        .username(username)
+                        .photoUrl(null)
+                        .build();
+                userRepository.save(newUser);
 
-            if(appleRefreshToken != null) {
-                body.put("appleRefreshToken", appleRefreshToken);
+                OauthAccount account = OauthAccount.builder()
+                        .user(newUser)
+                        .providerUserId(providerId)
+                        .provider(provider)
+                        .refreshToken(appleRefreshToken)
+                        .build();
+                oauthAccountRepository.save(account);
+
+                String accessToken = jwtProvider.generateAccessToken(newUser.getUserId());
+                String refreshToken = jwtProvider.generateRefreshToken(newUser.getUserId());
+
+                log.info("accessToken = {}, refreshToken = {}", accessToken, refreshToken);
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("isNewUser", true);
+                body.put("accessToken", accessToken);
+                body.put("refreshToken", refreshToken);
+                body.put("userId", newUser.getUserId());
+                body.put("provider", "apple");
+                String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+
+                log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+
+                targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
+                        .queryParam("key", key)
+                        .build().toUriString();
+
+            } else {
+                log.info("신규 유저 입니다. 회원가입 페이지로 리디렉션합니다.");
+                String registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname);
+                log.info("registerToken = {}", registerToken);
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("isNewUser", true);
+                body.put("registerToken", registerToken);
+                body.put("photoUrl", photoUrl);
+                body.put("nickname", nickname);
+
+                if(appleRefreshToken != null) {
+                    body.put("appleRefreshToken", appleRefreshToken);
+                }
+
+                String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+                log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+
+                targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
+                        .queryParam("key", key)
+                        .build().toString();
             }
-
-            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
-            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
-
-            targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
-                    .queryParam("key", key)
-                    .build().toString();
-
         } else {
             log.info("기존 유저 입니다. 메인 페이지로 리디렉션합니다.");
             OauthAccount account = existUser.get();

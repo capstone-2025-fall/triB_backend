@@ -5,6 +5,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import triB.triB.friendship.dto.UserResponse;
 import triB.triB.friendship.entity.Friend;
 import triB.triB.friendship.entity.Friendship;
 import triB.triB.friendship.entity.FriendshipStatus;
+import triB.triB.friendship.event.FriendshipEvent;
 import triB.triB.friendship.repository.FriendRepository;
 import triB.triB.friendship.repository.FriendshipRepository;
 import triB.triB.global.exception.CustomException;
@@ -47,6 +49,7 @@ public class FriendshipService {
     private final UserRepository userRepository;
     private final FcmSender fcmSender;
     private final TokenRepository tokenRepository;
+    private final ApplicationEventPublisher publisher;
 
     public List<UserResponse> getMyFriends(Long userId){
 
@@ -137,14 +140,7 @@ public class FriendshipService {
                 .build();
 
         friendshipRepository.save(friendship);
-
-        //FCM 메세지 알림 보내기
-        log.info("push 알림을 전송합니다.");
-        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getAddressee().getUserId(), IsAlarm.ON);
-        if (token != null) {
-            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_REQUEST, requester.getNickname()+" 님이 나에게 친구를 신청했어요!", token.getToken());
-            fcmSender.sendPushNotification(fcmSendRequest);
-        }
+        publisher.publishEvent(new FriendshipEvent(RequestType.FRIEND_REQUEST, userId1, userId2));
     }
 
     // 내게 온 요청 확인
@@ -185,13 +181,7 @@ public class FriendshipService {
         friendRepository.save(friend1);
         friendRepository.save(friend2);
 
-        // FCM 메세지 알림 보내기
-        log.info("push 알림을 전송합니다.");
-        Token token = tokenRepository.findByUser_UserIdAndUser_IsAlarm(friendship.getRequester().getUserId(), IsAlarm.ON);
-        if (token != null) {
-            FcmSendRequest fcmSendRequest = sendPushToToken(RequestType.FRIEND_ACCEPTED, friendship.getAddressee().getNickname()+" 님과 친구가 되었어요!", token.getToken());
-            fcmSender.sendPushNotification(fcmSendRequest);
-        }
+        publisher.publishEvent(new FriendshipEvent(RequestType.FRIEND_ACCEPTED, friendship.getRequester().getUserId(), friendship.getAddressee().getUserId()));
     }
 
     // 내게 온 친구요청 거절
@@ -205,16 +195,5 @@ public class FriendshipService {
 
         friendship.setFriendshipStatus(FriendshipStatus.REJECTED);
         friendshipRepository.save(friendship);
-    }
-
-    private FcmSendRequest sendPushToToken(RequestType requestType, String content, String token) {
-        return FcmSendRequest.builder()
-                .requestType(requestType)
-                .id(0L)
-                .title("TriB")
-                .content(content)
-                .image(null)
-                .token(token)
-                .build();
     }
 }
