@@ -185,6 +185,9 @@ public class AuthService {
                     .refreshToken(refreshToken)
                     .build();
             oauthAccountRepository.save(account);
+
+            redisClient.deletePendingSignup(provider, providerId);
+
             return user.getUserId();
         } catch (DataIntegrityViolationException e ){
             // 회원가입 실패시 S3에 올라간 사진 삭제로 무결성 유지
@@ -257,5 +260,38 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("임시 비밀번호 생성을 실패했습니다.");
         }
+    }
+
+    public AuthResponse completeAppleSign(String registerToken) {
+        String provider = jwtProvider.getProviderFromRegisterToken(registerToken);
+        String providerId = jwtProvider.getProviderUserIdFromRegisterToken(registerToken);
+        String username = jwtProvider.getUsernameFromRegisterToken(registerToken);
+        String nickname = jwtProvider.getNicknameFromRegisterToken(registerToken);
+        String appleRefreshToken = jwtProvider.getAppleRefreshTokenFromRegisterToken(registerToken);
+
+        User user = User.builder()
+                .email(null)
+                .password(null)
+                .nickname(nickname)
+                .username(username)
+                .photoUrl(null)
+                .build();
+        userRepository.save(user);
+
+        OauthAccount account = OauthAccount.builder()
+                .user(user)
+                .provider(provider)
+                .providerUserId(providerId)
+                .refreshToken(appleRefreshToken)
+                .build();
+        oauthAccountRepository.save(account);
+
+        // 회원가입 완료했으므로 pending 데이터 삭제
+        redisClient.deletePendingSignup(provider, providerId);
+        log.info("애플 회원가입 완료. pending 데이터 삭제. providerId: {}", providerId);
+
+        String accessToken = jwtProvider.generateAccessToken(user.getUserId());
+        String refreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+        return new AuthResponse(user.getUserId(), accessToken, refreshToken);
     }
 }
