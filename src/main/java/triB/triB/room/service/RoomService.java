@@ -18,6 +18,7 @@ import triB.triB.friendship.dto.UserResponse;
 import triB.triB.friendship.repository.FriendRepository;
 import triB.triB.global.exception.CustomException;
 import triB.triB.global.exception.ErrorCode;
+import triB.triB.global.utils.CheckBadWordsUtil;
 import triB.triB.room.dto.*;
 import triB.triB.chat.entity.Message;
 import triB.triB.room.entity.Room;
@@ -46,6 +47,7 @@ public class RoomService {
     private final FriendRepository friendRepository;
     private final PostRepository postRepository;
     private final UserBlockRepository userBlockRepository;
+    private final CheckBadWordsUtil checkBadWordsUtil;
 
     @Transactional(readOnly = true)
     public List<RoomsResponse> getRoomList(Long userId){
@@ -76,6 +78,9 @@ public class RoomService {
     @Transactional
     public RoomResponse makeChatRoom(Long userId, RoomRequest roomRequest) {
         Set<Long> blockedUserIds = new HashSet<>(userBlockRepository.findBlockedUserIdsByBlockerUserId(userId));
+
+        checkBadWordsUtil.validateNoBadWords(roomRequest.getRoomName());
+
         Room room = Room.builder()
                 .roomName(roomRequest.getRoomName())
                 .destination(roomRequest.getCountry())
@@ -145,6 +150,7 @@ public class RoomService {
             room.setDestination(roomRequest.getCountry());
         }
         if (roomName != null) {
+            checkBadWordsUtil.validateNoBadWords(roomRequest.getRoomName());
             room.setRoomName(roomRequest.getRoomName());
         }
         if (startDate != null) {
@@ -153,6 +159,7 @@ public class RoomService {
         if (endDate != null) {
             room.setEndDate(endDate);
         }
+        roomRepository.save(room);
     }
 
     @Transactional
