@@ -28,6 +28,7 @@ import triB.triB.global.exception.ErrorCode;
 import triB.triB.global.infra.RedisClient;
 import triB.triB.global.infra.AwsS3Client;
 import triB.triB.global.security.JwtProvider;
+import triB.triB.global.utils.CheckBadWordsUtil;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -46,6 +47,7 @@ public class AuthService {
     private final AwsS3Client s3Client;
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
+    private final CheckBadWordsUtil checkBadWordsUtil;
     private static final String charPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String passwordCharPool = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ?%!#*";
 
@@ -102,6 +104,10 @@ public class AuthService {
         String photoUrl = null;
         try {
             photoUrl = (photo != null && !photo.isEmpty()) ? s3Client.uploadFile(photo) : null;
+
+            checkBadWordsUtil.validateNoBadWords(authRequest.getNickname());
+            checkBadWordsUtil.validateNoBadWords(authRequest.getUsername());
+
             User user = User.builder()
                     .photoUrl(photoUrl)
                     .email(authRequest.getEmail())
@@ -121,7 +127,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse loginUser(String email, String password) {
-        log.info("로그인 시;");
+        log.info("로그인 시");
         User user = userRepository.findByEmail(email)
                 .orElseThrow(()->
                         new BadCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다."));
@@ -159,6 +165,9 @@ public class AuthService {
             }
             else if (image != null && !image.isEmpty())
                 photoUrl = image;
+
+            checkBadWordsUtil.validateNoBadWords(registerRequest.getNickname());
+            checkBadWordsUtil.validateNoBadWords(registerRequest.getUsername());
 
             User user = User.builder()
                     .photoUrl(photoUrl)
