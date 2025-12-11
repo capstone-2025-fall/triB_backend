@@ -89,7 +89,89 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String targetUrl;
 
         if (existUser.isEmpty()) {
+            String registerToken = "";
+            Map<String, Object> body = new HashMap<>();
             if (provider.equals("apple")) {
+                log.info("apple 회원가입입니다. 약관동의를 받아야 합니다.");
+                String email = oAuth2UserInfo.getEmail();
+                log.info("email = {}", email);
+                log.info("nickname = {}", nickname);
+
+                // email이 null인 경우 대비
+                String username;
+                if (email != null && email.contains("@")) {
+                    username = email.split("@")[0] + String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
+                } else {
+                    // email이 없으면 providerId 기반으로 username 생성
+                    username = "apple" + providerId.substring(0, Math.min(10, providerId.length()))
+                              + String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
+                }
+                log.info("username = {}", username);
+
+                registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname, username, appleRefreshToken);
+
+                // 약관 동의 안 하고 5분 지나면 스케줄러가 자동으로 애플 연결 해제
+                if (appleRefreshToken != null) {
+                    redisClient.savePendingSignup("apple", providerId, appleRefreshToken);
+                    log.info("애플 pending 데이터 저장 완료. providerId: {}", providerId);
+                }
+
+                body.put("isNewUser", true);
+                body.put("provider", provider);
+                body.put("registerToken", registerToken);
+
+           } else {
+                log.info("신규 유저 입니다. 회원가입 페이지로 리디렉션합니다.");
+                registerToken = jwtProvider.generateRegisterToken(provider, providerId, photoUrl, nickname, null, null);
+                log.info("registerToken = {}", registerToken);
+
+                redisClient.savePendingSignup(provider, providerId, null);
+
+                body.put("isNewUser", true);
+                body.put("registerToken", registerToken);
+                body.put("photoUrl", photoUrl);
+                body.put("nickname", nickname);
+            }
+            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+            targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
+                    .queryParam("key", key)
+                    .build().toString();
+        } else {
+            log.info("기존 유저 입니다. 메인 페이지로 리디렉션합니다.");
+            OauthAccount account = existUser.get();
+            User user = existUser.get().getUser();
+            Long userId = user.getUserId();
+
+            if (appleRefreshToken != null) {
+                account.setRefreshToken(appleRefreshToken);
+                oauthAccountRepository.save(account);
+            }
+            String accessToken = jwtProvider.generateAccessToken(user.getUserId());
+            String refreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+
+            log.info("accessToken = {}, refreshToken = {}", accessToken, refreshToken);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("isNewUser", false);
+            body.put("accessToken", accessToken);
+            body.put("refreshToken", refreshToken);
+            body.put("userId", userId);
+
+            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
+
+            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
+
+            targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
+                    .queryParam("key", key)
+                    .build().toUriString();
+        }
+        response.sendRedirect(targetUrl);
+    }
+}
+
+/*
+if (provider.equals("apple")) {
                 log.info("apple 회원가입입니다. 즉시 회원가입 처리합니다.");
                 String email = oAuth2UserInfo.getEmail();
                 log.info("email = {}", email);
@@ -155,34 +237,4 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                         .queryParam("key", key)
                         .build().toString();
             }
-        } else {
-            log.info("기존 유저 입니다. 메인 페이지로 리디렉션합니다.");
-            OauthAccount account = existUser.get();
-            User user = existUser.get().getUser();
-            Long userId = user.getUserId();
-
-            if (appleRefreshToken != null) {
-                account.setRefreshToken(appleRefreshToken);
-                oauthAccountRepository.save(account);
-            }
-            String accessToken = jwtProvider.generateAccessToken(user.getUserId());
-            String refreshToken = jwtProvider.generateRefreshToken(user.getUserId());
-
-            log.info("accessToken = {}, refreshToken = {}", accessToken, refreshToken);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("isNewUser", false);
-            body.put("accessToken", accessToken);
-            body.put("refreshToken", refreshToken);
-            body.put("userId", userId);
-            String key = redisClient.setTicketData("ti", objectMapper.writeValueAsString(body));
-
-            log.info("key = {}, body = {}", key, objectMapper.writeValueAsString(body));
-
-            targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
-                    .queryParam("key", key)
-                    .build().toUriString();
-        }
-        response.sendRedirect(targetUrl);
-    }
-}
+* */
