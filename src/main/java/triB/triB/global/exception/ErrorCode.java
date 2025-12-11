@@ -37,7 +37,9 @@ public enum ErrorCode {
     ROUTES_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ROUTES_API_ERROR", "경로 계산 중 오류가 발생했습니다."),
 
     INVALID_ACCESS(HttpStatus.INTERNAL_SERVER_ERROR, "INVALID_ACCESS", "탈퇴한 유저는 접근할 수 없습니다."),
-    MESSAGE_DELETED(HttpStatus.BAD_REQUEST, "MESSAGE_DELETED", "삭제된 메세지엔 답장할 수 없습니다.")
+    MESSAGE_DELETED(HttpStatus.BAD_REQUEST, "MESSAGE_DELETED", "삭제된 메세지엔 답장할 수 없습니다."),
+
+    USE_BAD_WORDS(HttpStatus.BAD_REQUEST, "USE_BAD_WORDS", "부적절한 언어는 작성이 불가능합니다.");
     ;
 
     private final HttpStatus httpStatus;
