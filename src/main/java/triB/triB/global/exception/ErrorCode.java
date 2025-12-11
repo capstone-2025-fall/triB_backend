@@ -46,8 +46,12 @@ public enum ErrorCode {
     CANNOT_BLOCK_YOURSELF(HttpStatus.BAD_REQUEST, "CANNOT_BLOCK_YOURSELF", "자기 자신을 차단할 수 없습니다."),
     USER_BLOCKED(HttpStatus.FORBIDDEN, "USER_BLOCKED", "차단된 사용자의 게시글입니다."),
     POST_BLOCKED(HttpStatus.FORBIDDEN, "POST_BLOCKED", "차단된 게시글입니다."),
-    COMMENT_BLOCKED(HttpStatus.FORBIDDEN, "COMMENT_BLOCKED", "차단된 댓글입니다.");
+    COMMENT_BLOCKED(HttpStatus.FORBIDDEN, "COMMENT_BLOCKED", "차단된 댓글입니다."),
+    REQUEST_TO_BLOCKER(HttpStatus.FORBIDDEN, "REQUEST_TO_BLOCKER", "차단당한 유저에게 친구 신청을 보낼 수 없습니다."),
+    REQUEST_TO_BLOCKED_USER(HttpStatus.FORBIDDEN, "REQUEST_TO_BLOCKED_USER", "차단한 유저입니다."),
+    INVITE_BLOCKED(HttpStatus.FORBIDDEN, "INVITE_BLOCKED", "차단한 유저는 채팅방에 초대할 수 없습니다.")
     ;
+
 
     private final HttpStatus httpStatus;
     private final String code;
