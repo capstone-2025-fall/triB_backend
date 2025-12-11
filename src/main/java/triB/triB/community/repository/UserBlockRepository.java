@@ -24,7 +24,7 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, UserBlockI
      */
     @Query("SELECT new triB.triB.friendship.dto.UserResponse(u.userId, u.nickname, u.photoUrl) " +
            "FROM UserBlock ub JOIN ub.blockedUser u " +
-           "WHERE ub.id.blockerUserId = :blockerUserId AND u.status = 'ACTIVE'")
+           "WHERE ub.id.blockerUserId = :blockerUserId AND u.userStatus = 'ACTIVE'")
     List<UserResponse> findBlockedUsersWithDetailsByBlockerUserId(@Param("blockerUserId") Long blockerUserId);
 
     /**
