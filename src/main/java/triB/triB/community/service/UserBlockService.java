@@ -7,6 +7,7 @@ import triB.triB.auth.repository.UserRepository;
 import triB.triB.community.entity.UserBlock;
 import triB.triB.community.entity.UserBlockId;
 import triB.triB.community.repository.UserBlockRepository;
+import triB.triB.friendship.dto.UserResponse;
 import triB.triB.global.exception.CustomException;
 import triB.triB.global.exception.ErrorCode;
 
@@ -60,6 +61,13 @@ public class UserBlockService {
      */
     public List<Long> getBlockedUserIds(Long blockerUserId) {
         return userBlockRepository.findBlockedUserIdsByBlockerUserId(blockerUserId);
+    }
+
+    /**
+     * 특정 유저가 차단한 모든 유저의 상세 정보 조회
+     */
+    public List<UserResponse> getBlockedUsers(Long blockerUserId) {
+        return userBlockRepository.findBlockedUsersWithDetailsByBlockerUserId(blockerUserId);
     }
 
     /**

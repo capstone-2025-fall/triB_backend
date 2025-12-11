@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import triB.triB.community.service.UserBlockService;
+import triB.triB.friendship.dto.UserResponse;
 import triB.triB.global.response.ApiResponse;
 import triB.triB.global.security.UserPrincipal;
 
@@ -46,12 +47,12 @@ public class UserBlockController {
 
     @Operation(summary = "차단한 유저 목록", description = "내가 차단한 유저 목록을 조회합니다.")
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<Long>>> getBlockedUsers(
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getBlockedUsers(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
         Long blockerUserId = userPrincipal.getUserId();
-        List<Long> blockedUserIds = userBlockService.getBlockedUserIds(blockerUserId);
+        List<UserResponse> blockedUsers = userBlockService.getBlockedUsers(blockerUserId);
 
-        return ApiResponse.ok("차단한 유저 목록을 조회했습니다.", blockedUserIds);
+        return ApiResponse.ok("차단한 유저 목록을 조회했습니다.", blockedUsers);
     }
 }
